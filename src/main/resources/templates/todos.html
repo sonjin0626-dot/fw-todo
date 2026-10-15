@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>一覧</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="page-title">一覧</h1>
+        <p th:if="${#lists.isEmpty(todos)}">まだ1件も登録されていません</p>
+        <table class="todo-table" th:unless="${#lists.isEmpty(todos)}">
+            <thead>
+                <tr>
+                    <th scope="col">やること</th>
+                    <th scope="col">ジャンル</th>
+                    <th scope="col">優先度</th>
+                    <th scope="col">期限</th>
+                    <th scope="col">状態</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="todo : ${todos}">
+                    <td th:text="${todo.title}"></td>
+                    <td th:text="${todo.category}"></td>
+                    <td th:text="${todo.priority == 1 ? '高' : (todo.priority == 2 ? '中' : '低')}"></td>
+                    <td th:text="${todo.dueDate}"></td>
+                    <td th:text="${todo.completed == true ? '完了' : '未完了'}"></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

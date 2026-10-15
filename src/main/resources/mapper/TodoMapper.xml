@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.todoapp.TodoMapper">
+    <select id="findAll" resultType="com.example.todoapp.Todo">
+        SELECT id, title, detail, category, priority,
+               due_date, completed, created_at, updated_at
+        FROM todos
+        ORDER BY due_date ASC
+    </select>
+</mapper>
