@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登録</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="page-title">登録</h1>
+        <form th:action="@{/todos/confirm}" th:object="${todo}" method="post">
+            <div class="form-row">
+                <label class="form-label" for="title">やること（必須）</label>
+                <input class="form-input" type="text" th:field="*{title}">
+                <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
+            </div>
+            <div class="form-row">
+                <label class="form-label" for="detail">メモ（任意）</label>
+                <input class="form-input" type="text" th:field="*{detail}">
+                <p class="error" th:if="${#fields.hasErrors('detail')}" th:errors="*{detail}"></p>
+            </div>
+            <div class="form-row">
+                <label class="form-label" for="category">ジャンル（必須）</label>
+                <select class="form-input" th:field="*{category}">
+                    <option value=""></option>
+                    <option value="デザイン">デザイン</option>
+                    <option value="マーケティング">マーケティング</option>
+                    <option value="プログラミング">プログラミング</option>
+                    <option value="資格">資格</option>
+                    <option value="就職活動">就職活動</option>
+                </select>
+                <p class="error" th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></p>
+            </div>
+            <div class="form-row">
+                <label class="form-label" for="priority">優先度（必須）</label>
+                <select class="form-input" th:field="*{priority}">
+                    <option value=""></option>
+                    <option value="1">高</option>
+                    <option value="2">中</option>
+                    <option value="3">低</option>
+                </select>
+                <p class="error" th:if="${#fields.hasErrors('priority')}" th:errors="*{priority}"></p>
+            </div>
+            <div class="form-row">
+                <label class="form-label" for="dueDate">期限（任意）</label>
+                <input class="form-input" type="date" th:field="*{dueDate}">
+            </div>
+            <button class="btn" type="submit">確認する</button>
+            <a class="btn sub" th:href="@{/todos}">一覧へ</a>
+        </form>
+    </div>
+</body>
+</html>
