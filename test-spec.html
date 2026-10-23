@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>やること管理アプリ テスト仕様書</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 12px;
+      width: 100%;
+      color: #172033;
+      background: #fff;
+      font-family: "Yu Gothic", Meiryo, sans-serif;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 21px;
+    }
+
+    p {
+      margin: 5px 0;
+    }
+
+    .instructions {
+      margin-bottom: 12px;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin: 8px 0;
+    }
+
+    button {
+      border: 1px solid #334155;
+      border-radius: 5px;
+      padding: 8px 18px;
+      color: #fff;
+      background: #334155;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    textarea:focus-visible {
+      outline: 2px solid #2563eb;
+      outline-offset: 2px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+
+    caption {
+      text-align: left;
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    th,
+    td {
+      border: 1px solid #94a3b8;
+      padding: 6px;
+      vertical-align: top;
+      text-align: left;
+      overflow-wrap: anywhere;
+    }
+
+    thead th {
+      background: #eef2f6;
+    }
+
+    tbody th {
+      text-align: center;
+      font-weight: normal;
+    }
+
+    .result-controls {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .result-controls label {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      cursor: pointer;
+    }
+
+    input[type="radio"] {
+      margin: 0;
+      width: 13px;
+      height: 13px;
+      accent-color: #172033;
+    }
+
+    textarea {
+      display: block;
+      width: 100%;
+      min-height: 54px;
+      height: auto;
+      padding: 5px;
+      border: 1px solid #94a3b8;
+      border-radius: 3px;
+      resize: none;
+      overflow: hidden;
+      color: inherit;
+      background: white;
+      font: inherit;
+      line-height: 1.5;
+    }
+
+    textarea::placeholder {
+      color: #64748b;
+      font-size: 10px;
+    }
+
+    .print-note,
+    .print-result {
+      display: none;
+    }
+
+    details {
+      margin: 10px 0;
+      border: 1px solid #cbd5e1;
+      padding: 8px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .sample {
+      margin: 6px 0;
+      border: 1px solid #cbd5e1;
+      padding: 6px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      user-select: all;
+      font-family: inherit;
+    }
+
+    .mapping {
+      margin-top: 18px;
+    }
+
+    .mapping h2 {
+      font-size: 15px;
+      margin: 0 0 6px;
+    }
+
+    .mapping li {
+      margin: 3px 0;
+    }
+
+    @page {
+      size: A4 landscape;
+      margin: 10mm;
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        font-size: 8pt;
+        color: #000;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+
+      h1 {
+        font-size: 14pt;
+      }
+
+      .toolbar,
+      .samples {
+        display: none !important;
+      }
+
+      table {
+        width: 100%;
+      }
+
+      thead {
+        display: table-header-group;
+      }
+
+      th,
+      td {
+        padding: 4px;
+      }
+
+      tr,
+      td {
+        break-inside: auto;
+        page-break-inside: auto;
+      }
+
+      .result-controls,
+      textarea {
+        display: none !important;
+      }
+
+      .print-result {
+        display: block;
+        white-space: nowrap;
+        text-align: center;
+      }
+
+      .print-note {
+        display: block;
+        min-height: 2.8em;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        height: auto;
+        overflow: visible;
+      }
+
+      .mapping {
+        break-before: auto;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>やること管理アプリ テスト仕様書</h1>
+  <div class="instructions">
+    <p>元の仕様書：handout_app_spec.md ／ 対象：http://localhost:8080 ／ 全52項目 ／ 作成時点ではすべて未実施です。</p>
+    <p><strong>使い方：</strong>上から番号順に、アプリの画面だけを操作して確かめます。期待した表示なら OK、違う表示なら NG
+      を選び、「備考/NG」に実際に何がどう出たかを書きます。後の項目に進めない場合は、結果を選ばず備考に理由を書きます。</p>
+    <p>
+      <strong>開始前：</strong>一覧は5件です。元からある5件は編集・削除せず、項目1の備考に見分ける情報を控えます。A・B・Cはこの仕様書のテストで追加する行の呼び名です。同じ名前がすでにある場合は、以下の「テスト専用-仕様確認」を、元の行と重ならない同じ文字列へ読み替えます。
+    </p>
+    <p><strong>順番と件数：</strong>開始5件 → Aを登録して6件 → Bで7件 → Cで8件 → Aを削除して7件 →
+      最後にB・Cを削除して5件へ戻します。番号は、画面のアドレスに含まれる、その行を見分ける数字です。</p>
+    <p>
+      日付は指定した年月日を選びます。期限が空の行を先頭・末尾のどちらに置くかは仕様書に指定がないため、期限のある行同士だけで並びを判定します。登録データ自体を0件にはせず、0件の表示文は検索結果を0件にする項目43・44で確かめます。
+    </p>
+    <p>
+      <strong>記録の保存：</strong>入力した記録はこの画面を開いている間だけ有効です。閉じる・再読み込みをする前に「PDFで保存」を押し、印刷ダイアログ（印刷方法を選ぶ画面）で「PDFとして保存」を選びます。長い備考は折り返して印刷します。
+    </p>
+  </div>
+  <details class="samples">
+    <summary>入力に使う255文字・256文字の見本（開いて文字だけをコピー）</summary>
+    <p>見本の文字を選んでコピーし、アプリの「やること」または「メモ」に貼り付けます。見本の前後に空白や改行を足さないでください。</p>
+    <p>「あ」255文字：</p>
+    <pre class="sample"
+      data-length="255">あああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ</pre>
+    <p>「あ」256文字：</p>
+    <pre class="sample"
+      data-length="256">ああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ</pre>
+  </details>
+  <div class="toolbar"><button type="button" id="save-pdf">PDFで保存</button></div>
+  <table id="test-table">
+    <caption>確認項目（結果は未選択、備考は空欄から開始）</caption>
+    <colgroup>
+      <col style="width:5%">
+      <col style="width:20%">
+      <col style="width:15%">
+      <col style="width:25%">
+      <col style="width:10%">
+      <col style="width:25%">
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col">番号</th>
+        <th scope="col">確かめること</th>
+        <th scope="col">入れる値</th>
+        <th scope="col">期待する結果</th>
+        <th scope="col">結果</th>
+        <th scope="col">備考/NG</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr data-number="1" data-source="1 一覧・検索・並び替え／4 一覧／5-4">
+        <th scope="row">1</th>
+        <td>一覧の表示と、最初の期限の並びを確認する</td>
+        <td>http://localhost:8080/todos を開く（検索条件なし）。 開始時の5件の名前など、見分けられる情報をこの行の備考に控える。</td>
+        <td>既存の5件が期限の近い順に並び、列が「やること／ジャンル／優先度／期限／状態／操作」の順で、名前・ジャンルの絞り込み欄、「絞り込む」、期限の並び替え2本、「新規登録」、各行の「編集」「削除」が表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-1" value="OK"> OK</label><label><input
+                type="radio" name="result-1" value="NG"> NG</label></div><span class="print-result" aria-hidden="true">○
+            OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目1の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="2" data-source="1 登録／4 登録">
+        <th scope="row">2</th>
+        <td>登録画面の入力欄と選択肢を確認する</td>
+        <td>一覧の「新規登録」を押す。</td>
+        <td>やること・メモの1行入力欄、最初は空欄のジャンル・優先度の選択欄、期限の日付欄、「確認する」「一覧へ」が表示され、ジャンルはデザイン・マーケティング・プログラミング・資格・就職活動、優先度は高・中・低から選べる。
+        </td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-2" value="OK"> OK</label><label><input
+                type="radio" name="result-2" value="NG"> NG</label></div><span class="print-result" aria-hidden="true">○
+            OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目2の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="3" data-source="4 登録">
+        <th scope="row">3</th>
+        <td>登録画面の「一覧へ」で戻る</td>
+        <td>何も入力せず「一覧へ」を押す。</td>
+        <td>既存の5件の一覧が表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-3" value="OK"> OK</label><label><input
+                type="radio" name="result-3" value="NG"> NG</label></div><span class="print-result" aria-hidden="true">○
+            OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目3の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="4" data-source="4 登録／5-1">
+        <th scope="row">4</th>
+        <td>登録で、やることの空欄を確認する</td>
+        <td>「新規登録」を開き、やること＝空欄、メモ＝Aのメモ、ジャンル＝プログラミング、優先度＝高、期限＝2030-04-20 にして「確認する」を押す。</td>
+        <td>登録画面に留まり、やること欄の下に「やることを入力してください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-4" value="OK"> OK</label><label><input
+                type="radio" name="result-4" value="NG"> NG</label></div><span class="print-result" aria-hidden="true">○
+            OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目4の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="5" data-source="5-1">
+        <th scope="row">5</th>
+        <td>登録で、やることの半角空白だけの入力を確認する</td>
+        <td>やること＝半角空白3個にし、他の欄は前の項目と同じ値を入れて「確認する」を押す。</td>
+        <td>登録画面に留まり、やること欄の下に「やることを入力してください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-5" value="OK"> OK</label><label><input
+                type="radio" name="result-5" value="NG"> NG</label></div><span class="print-result" aria-hidden="true">○
+            OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目5の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="6" data-source="5-1">
+        <th scope="row">6</th>
+        <td>登録で、やることの全角空白だけの入力を確認する</td>
+        <td>やること＝全角空白3個にし、他の欄は項目4と同じ値を入れて「確認する」を押す。</td>
+        <td>登録画面に留まり、やること欄の下に「やることを入力してください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-6" value="OK"> OK</label><label><input
+                type="radio" name="result-6" value="NG"> NG</label></div><span class="print-result" aria-hidden="true">○
+            OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目6の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="7" data-source="5-1">
+        <th scope="row">7</th>
+        <td>登録で、やることの256文字を確認する</td>
+        <td>やること＝「あ」256文字、他の欄＝項目4と同じ値で「確認する」を押す（下の文字数見本を使う）。</td>
+        <td>登録画面に留まり、やること欄の下に「やることは255文字以内で入力してください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-7" value="OK"> OK</label><label><input
+                type="radio" name="result-7" value="NG"> NG</label></div><span class="print-result" aria-hidden="true">○
+            OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目7の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="8" data-source="5-1">
+        <th scope="row">8</th>
+        <td>登録で、メモの256文字を確認する</td>
+        <td>やること＝テスト専用-仕様確認-A、メモ＝「あ」256文字、ジャンル＝プログラミング、優先度＝高、期限＝2030-04-20 にして「確認する」を押す。</td>
+        <td>登録画面に留まり、メモ欄の下に「メモは255文字以内で入力してください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-8" value="OK"> OK</label><label><input
+                type="radio" name="result-8" value="NG"> NG</label></div><span class="print-result" aria-hidden="true">○
+            OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目8の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="9" data-source="4 登録／5-1">
+        <th scope="row">9</th>
+        <td>登録で、ジャンルの未選択を確認する</td>
+        <td>やること＝テスト専用-仕様確認-A、メモ＝Aのメモ、ジャンル＝空欄、優先度＝高、期限＝2030-04-20 にして「確認する」を押す。</td>
+        <td>登録画面に留まり、ジャンル欄の下に「ジャンルを選んでください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-9" value="OK"> OK</label><label><input
+                type="radio" name="result-9" value="NG"> NG</label></div><span class="print-result" aria-hidden="true">○
+            OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目9の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="10" data-source="4 登録／5-1">
+        <th scope="row">10</th>
+        <td>登録で、優先度の未選択を確認する</td>
+        <td>やること＝テスト専用-仕様確認-A、メモ＝Aのメモ、ジャンル＝プログラミング、優先度＝空欄、期限＝2030-04-20 にして「確認する」を押す。</td>
+        <td>登録画面に留まり、優先度欄の下に「優先度を選んでください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-10" value="OK"> OK</label><label><input
+                type="radio" name="result-10" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目10の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="11" data-source="4 登録の確認／5-1">
+        <th scope="row">11</th>
+        <td>登録で、やることの255文字を受け付ける</td>
+        <td>やること＝「あ」255文字、メモ＝Aのメモ、ジャンル＝プログラミング、優先度＝高、期限＝2030-04-20 にして「確認する」を押す。</td>
+        <td>登録の確認画面に、やることの「あ」255文字と他の4つの入力値が入力欄ではなく文字で表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-11" value="OK"> OK</label><label><input
+                type="radio" name="result-11" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目11の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="12" data-source="4 登録の確認">
+        <th scope="row">12</th>
+        <td>登録の確認から、入力した値を保って戻る</td>
+        <td>登録の確認の「書き直す」を押す。</td>
+        <td>登録画面に戻り、やること255文字・メモ「Aのメモ」・ジャンル「プログラミング」・優先度「高」・期限「2030-04-20」が各欄に入って表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-12" value="OK"> OK</label><label><input
+                type="radio" name="result-12" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目12の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="13" data-source="4 登録の確認／5-1">
+        <th scope="row">13</th>
+        <td>登録で、メモの255文字を受け付ける</td>
+        <td>やること＝テスト専用-仕様確認-A、メモ＝「あ」255文字、ジャンル＝プログラミング、優先度＝高、期限＝2030-04-20 にして「確認する」を押す。</td>
+        <td>登録の確認画面に、メモの「あ」255文字と他の4つの入力値が入力欄ではなく文字で表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-13" value="OK"> OK</label><label><input
+                type="radio" name="result-13" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目13の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="14" data-source="4 登録の確認">
+        <th scope="row">14</th>
+        <td>登録の確認から、メモを含む5つの値を保って戻る</td>
+        <td>「書き直す」を押す。</td>
+        <td>登録画面に戻り、やること「テスト専用-仕様確認-A」・メモ255文字・ジャンル「プログラミング」・優先度「高」・期限「2030-04-20」が各欄に入って表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-14" value="OK"> OK</label><label><input
+                type="radio" name="result-14" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目14の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="15" data-source="1 登録・一覧／4 一覧・登録の確認／5-3">
+        <th scope="row">15</th>
+        <td>Aを登録し、登録後の文と一覧の表示を確認する</td>
+        <td>メモを「Aのメモ」に変更し、「確認する」→「登録する」を押す。</td>
+        <td>一覧のいちばん上に「登録しました」が表示され、全6件の中にAがジャンル「プログラミング」・優先度「高」・期限「2030-04-20」・状態「未完了」で表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-15" value="OK"> OK</label><label><input
+                type="radio" name="result-15" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目15の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="16" data-source="4 登録・登録の確認／5-1">
+        <th scope="row">16</th>
+        <td>メモと期限を空欄にしたBの登録内容を確認する</td>
+        <td>「新規登録」で、やること＝テスト専用-仕様確認-B、メモ＝空欄、ジャンル＝デザイン、優先度＝低、期限＝空欄にして「確認する」を押す。</td>
+        <td>登録の確認画面に、やること・ジャンル「デザイン」・優先度「低」が文字で並び、メモと期限は「（入力なし）」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-16" value="OK"> OK</label><label><input
+                type="radio" name="result-16" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目16の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="17" data-source="1 登録／4 一覧／5-3">
+        <th scope="row">17</th>
+        <td>Bを登録し、低・未完了の表示を確認する</td>
+        <td>Bの登録の確認で「登録する」を押す。</td>
+        <td>一覧のいちばん上に「登録しました」が表示され、全7件の中にBがジャンル「デザイン」・優先度「低」・状態「未完了」で表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-17" value="OK"> OK</label><label><input
+                type="radio" name="result-17" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目17の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="18" data-source="4 登録・登録の確認／5-1（期限には決まりなし）">
+        <th scope="row">18</th>
+        <td>過去の期限を入れたCの登録内容を確認する</td>
+        <td>「新規登録」で、やること＝テスト専用-仕様確認-C、メモ＝Cのメモ、ジャンル＝資格、優先度＝中、期限＝2000-01-10 にして「確認する」を押す。</td>
+        <td>登録の確認画面に、やること・メモ「Cのメモ」・ジャンル「資格」・優先度「中」・期限「2000-01-10」が文字で表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-18" value="OK"> OK</label><label><input
+                type="radio" name="result-18" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目18の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="19" data-source="1 登録／4 一覧／5-3">
+        <th scope="row">19</th>
+        <td>Cを登録し、中・未完了の表示を確認する</td>
+        <td>Cの登録の確認で「登録する」を押す。</td>
+        <td>一覧のいちばん上に「登録しました」が表示され、全8件の中にCがジャンル「資格」・優先度「中」・期限「2000-01-10」・状態「未完了」で表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-19" value="OK"> OK</label><label><input
+                type="radio" name="result-19" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目19の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="20" data-source="1 編集／4 編集">
+        <th scope="row">20</th>
+        <td>Aの編集画面と、保存済みの6つの値を確認する</td>
+        <td>一覧のAの「編集」を押す；アドレスの /todos/ と /edit の間にある番号を、この行の備考に控える。</td>
+        <td>編集画面に、やること「テスト専用-仕様確認-A」・メモ「Aのメモ」・ジャンル「プログラミング」・優先度「高」・期限「2030-04-20」・完了の未チェックが入った6つの欄と「確認する」「一覧へ」が表示される。
+        </td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-20" value="OK"> OK</label><label><input
+                type="radio" name="result-20" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目20の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="21" data-source="4 編集">
+        <th scope="row">21</th>
+        <td>編集画面の「一覧へ」で戻る</td>
+        <td>値を変えずに「一覧へ」を押す。</td>
+        <td>全8件の一覧が表示され、Aは変更前の内容で表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-21" value="OK"> OK</label><label><input
+                type="radio" name="result-21" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目21の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="22" data-source="4 編集／5-1">
+        <th scope="row">22</th>
+        <td>編集で、やることの空欄を確認する</td>
+        <td>Aの「編集」を開き、やること＝空欄、他の5欄＝項目20の値で「確認する」を押す。</td>
+        <td>編集画面に留まり、やること欄の下に「やることを入力してください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-22" value="OK"> OK</label><label><input
+                type="radio" name="result-22" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目22の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="23" data-source="5-1">
+        <th scope="row">23</th>
+        <td>編集で、やることの半角空白だけの入力を確認する</td>
+        <td>やること＝半角空白3個、他の5欄＝項目20の値で「確認する」を押す。</td>
+        <td>編集画面に留まり、やること欄の下に「やることを入力してください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-23" value="OK"> OK</label><label><input
+                type="radio" name="result-23" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目23の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="24" data-source="5-1">
+        <th scope="row">24</th>
+        <td>編集で、やることの全角空白だけの入力を確認する</td>
+        <td>やること＝全角空白3個、他の5欄＝項目20の値で「確認する」を押す。</td>
+        <td>編集画面に留まり、やること欄の下に「やることを入力してください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-24" value="OK"> OK</label><label><input
+                type="radio" name="result-24" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目24の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="25" data-source="5-1">
+        <th scope="row">25</th>
+        <td>編集で、やることの256文字を確認する</td>
+        <td>やること＝「あ」256文字、他の5欄＝項目20の値で「確認する」を押す。</td>
+        <td>編集画面に留まり、やること欄の下に「やることは255文字以内で入力してください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-25" value="OK"> OK</label><label><input
+                type="radio" name="result-25" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目25の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="26" data-source="5-1">
+        <th scope="row">26</th>
+        <td>編集で、メモの256文字を確認する</td>
+        <td>やること＝テスト専用-仕様確認-A、メモ＝「あ」256文字、他の4欄＝項目20の値で「確認する」を押す。</td>
+        <td>編集画面に留まり、メモ欄の下に「メモは255文字以内で入力してください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-26" value="OK"> OK</label><label><input
+                type="radio" name="result-26" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目26の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="27" data-source="4 編集／5-1">
+        <th scope="row">27</th>
+        <td>編集で、ジャンルの未選択を確認する</td>
+        <td>やること＝テスト専用-仕様確認-A、メモ＝Aのメモ、ジャンル＝空欄、優先度＝高、期限＝2030-04-20、完了＝未チェックで「確認する」を押す。</td>
+        <td>編集画面に留まり、ジャンル欄の下に「ジャンルを選んでください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-27" value="OK"> OK</label><label><input
+                type="radio" name="result-27" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目27の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="28" data-source="4 編集／5-1">
+        <th scope="row">28</th>
+        <td>編集で、優先度の未選択を確認する</td>
+        <td>やること＝テスト専用-仕様確認-A、メモ＝Aのメモ、ジャンル＝プログラミング、優先度＝空欄、期限＝2030-04-20、完了＝未チェックで「確認する」を押す。</td>
+        <td>編集画面に留まり、優先度欄の下に「優先度を選んでください」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-28" value="OK"> OK</label><label><input
+                type="radio" name="result-28" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目28の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="29" data-source="4 編集の確認／5-1">
+        <th scope="row">29</th>
+        <td>編集で、やることの255文字を受け付ける</td>
+        <td>やること＝「あ」255文字、他の5欄＝項目20の値で「確認する」を押す。</td>
+        <td>編集の確認画面に、やることの「あ」255文字と他の5つの値が入力欄ではなく文字で表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-29" value="OK"> OK</label><label><input
+                type="radio" name="result-29" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目29の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="30" data-source="4 編集の確認／5-1">
+        <th scope="row">30</th>
+        <td>編集で、メモの255文字を受け付ける</td>
+        <td>「書き直す」で戻り、やること＝テスト専用-仕様確認-A、メモ＝「あ」255文字、他の4欄＝項目20の値で「確認する」を押す。</td>
+        <td>編集の確認画面に、メモの「あ」255文字と他の5つの値が入力欄ではなく文字で表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-30" value="OK"> OK</label><label><input
+                type="radio" name="result-30" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目30の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="31" data-source="4 編集・編集の確認">
+        <th scope="row">31</th>
+        <td>編集の確認で、変更した6つの値を確認する</td>
+        <td>「書き直す」で戻り、やること＝テスト専用-仕様確認-A-編集後、メモ＝Aの変更メモ、ジャンル＝マーケティング、優先度＝中、期限＝2030-04-25、完了＝チェックありにして「確認する」を押す。</td>
+        <td>
+          編集の確認画面に、やること「テスト専用-仕様確認-A-編集後」・メモ「Aの変更メモ」・ジャンル「マーケティング」・優先度「中」・期限「2030-04-25」・状態「完了」が文字で並び、「保存する」「書き直す」が表示される。
+        </td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-31" value="OK"> OK</label><label><input
+                type="radio" name="result-31" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目31の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="32" data-source="4 編集の確認">
+        <th scope="row">32</th>
+        <td>編集の確認から、変更した6つの値を保って戻る</td>
+        <td>「書き直す」を押す。</td>
+        <td>編集画面に戻り、項目31の5つの値と完了のチェックが各欄に入って表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-32" value="OK"> OK</label><label><input
+                type="radio" name="result-32" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目32の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="33" data-source="1 編集・一覧／4 一覧・編集の確認／5-3">
+        <th scope="row">33</th>
+        <td>Aの変更を保存し、保存後の文と完了の表示を確認する</td>
+        <td>値を変えずに「確認する」→「保存する」を押す。</td>
+        <td>一覧のいちばん上に「保存しました」が表示され、全8件の中にAがやること「テスト専用-仕様確認-A-編集後」・ジャンル「マーケティング」・優先度「中」・期限「2030-04-25」・状態「完了」で表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-33" value="OK"> OK</label><label><input
+                type="radio" name="result-33" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目33の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="34" data-source="4 編集・編集の確認／5-1">
+        <th scope="row">34</th>
+        <td>編集でもメモと期限を空欄にできることを確認する</td>
+        <td>一覧のBの「編集」を押し、ジャンルだけ「就職活動」に変え、メモ・期限は空欄、優先度は低、完了は未チェックのまま「確認する」を押す。</td>
+        <td>編集の確認画面に、やること「テスト専用-仕様確認-B」・ジャンル「就職活動」・優先度「低」・状態「未完了」が文字で並び、メモと期限は「（入力なし）」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-34" value="OK"> OK</label><label><input
+                type="radio" name="result-34" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目34の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="35" data-source="1 編集／4 一覧／5-3">
+        <th scope="row">35</th>
+        <td>Bの変更を保存する</td>
+        <td>Bの編集の確認で「保存する」を押す。</td>
+        <td>一覧のいちばん上に「保存しました」が表示され、全8件の中にBがジャンル「就職活動」・優先度「低」・状態「未完了」で表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-35" value="OK"> OK</label><label><input
+                type="radio" name="result-35" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目35の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="36" data-source="1 検索／4 一覧／5-4">
+        <th scope="row">36</th>
+        <td>名前の一部分で絞り込む</td>
+        <td>名前＝テスト専用-仕様確認-A、ジャンル＝すべてにして「絞り込む」を押す。</td>
+        <td>名前に「テスト専用-仕様確認-A」を含むAだけが一覧に表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-36" value="OK"> OK</label><label><input
+                type="radio" name="result-36" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目36の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="37" data-source="1 検索／4 一覧／5-4">
+        <th scope="row">37</th>
+        <td>ジャンルが同じものだけに絞り込む</td>
+        <td>名前＝空欄、ジャンル＝マーケティングにして「絞り込む」を押す。</td>
+        <td>ジャンルが「マーケティング」の行だけが一覧に表示され、その中にAが含まれ、BとCは表示されない。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-37" value="OK"> OK</label><label><input
+                type="radio" name="result-37" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目37の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="38" data-source="4 一覧／5-4">
+        <th scope="row">38</th>
+        <td>名前とジャンルを組み合わせて絞り込む</td>
+        <td>名前＝テスト専用-仕様確認、ジャンル＝就職活動にして「絞り込む」を押す。</td>
+        <td>名前に「テスト専用-仕様確認」を含み、ジャンルが「就職活動」のBだけが一覧に表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-38" value="OK"> OK</label><label><input
+                type="radio" name="result-38" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目38の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="39" data-source="4 一覧／5-4">
+        <th scope="row">39</th>
+        <td>名前を空欄、ジャンルを「すべて」にして全件を出す</td>
+        <td>名前＝空欄、ジャンル＝すべてにして「絞り込む」を押す。</td>
+        <td>既存の5件とA・B・Cを合わせた8件が一覧に表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-39" value="OK"> OK</label><label><input
+                type="radio" name="result-39" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目39の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="40" data-source="1 並び替え／4 一覧／5-4">
+        <th scope="row">40</th>
+        <td>期限が近い順に並び替える</td>
+        <td>名前＝テスト専用-仕様確認、ジャンル＝すべてで絞り込み、「期限が近い順」を押す。</td>
+        <td>絞り込んだA・B・Cが表示され、期限のあるC「2000-01-10」がA「2030-04-25」より前に並ぶ。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-40" value="OK"> OK</label><label><input
+                type="radio" name="result-40" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目40の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="41" data-source="1 並び替え／4 一覧／5-4">
+        <th scope="row">41</th>
+        <td>期限が遠い順に並び替える</td>
+        <td>前の絞り込みのまま「期限が遠い順」を押す。</td>
+        <td>絞り込んだA・B・Cが表示され、期限のあるA「2030-04-25」がC「2000-01-10」より前に並ぶ。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-41" value="OK"> OK</label><label><input
+                type="radio" name="result-41" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目41の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="42" data-source="5-4">
+        <th scope="row">42</th>
+        <td>絞り込みと並びの向きをアドレスから開き直す</td>
+        <td>名前＝テスト専用-仕様確認、ジャンル＝マーケティングで絞り込み、「期限が近い順」を押す；keyword・category・order（名前・ジャンル・並び順を渡す名前）が付いたアドレスをコピーして開き直す。</td>
+        <td>アドレスに名前とジャンルの条件および order=asc が付き、開き直しても同じ条件でAだけの一覧が表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-42" value="OK"> OK</label><label><input
+                type="radio" name="result-42" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目42の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="43" data-source="4 一覧／5-4">
+        <th scope="row">43</th>
+        <td>名前の検索結果が0件のときの文を確認する</td>
+        <td>名前＝テスト専用-仕様確認-該当なし、ジャンル＝すべてにして「絞り込む」を押す。</td>
+        <td>一覧にやることの行は出ず、「まだ1件も登録されていません」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-43" value="OK"> OK</label><label><input
+                type="radio" name="result-43" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目43の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="44" data-source="4 一覧／5-4">
+        <th scope="row">44</th>
+        <td>名前とジャンルの組み合わせが0件のときの文を確認する</td>
+        <td>名前＝テスト専用-仕様確認-A、ジャンル＝就職活動にして「絞り込む」を押す。</td>
+        <td>一覧にやることの行は出ず、「まだ1件も登録されていません」と表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-44" value="OK"> OK</label><label><input
+                type="radio" name="result-44" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目44の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="45" data-source="5-4">
+        <th scope="row">45</th>
+        <td>削除前に絞り込みを解除する</td>
+        <td>名前＝空欄、ジャンル＝すべてにして「絞り込む」を押す。</td>
+        <td>既存の5件とA・B・Cを合わせた8件が一覧に表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-45" value="OK"> OK</label><label><input
+                type="radio" name="result-45" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目45の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="46" data-source="1 削除／4 削除確認">
+        <th scope="row">46</th>
+        <td>Aの削除確認の表示を確認する</td>
+        <td>一覧のAの「削除」を押す。</td>
+        <td>削除確認にやること「テスト専用-仕様確認-A-編集後」・ジャンル「マーケティング」・期限「2030-04-25」が文字で表示され、入力欄はなく「消す」「やめる」が表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-46" value="OK"> OK</label><label><input
+                type="radio" name="result-46" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目46の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="47" data-source="4 削除確認">
+        <th scope="row">47</th>
+        <td>削除確認の「やめる」で削除を取りやめる</td>
+        <td>Aの削除確認で「やめる」を押す。</td>
+        <td>全8件の一覧に戻り、Aが残って表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-47" value="OK"> OK</label><label><input
+                type="radio" name="result-47" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目47の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="48" data-source="1 削除／4 削除確認／5-3">
+        <th scope="row">48</th>
+        <td>Aを削除し、削除後の文を確認する</td>
+        <td>Aの「削除」→削除確認の「消す」を押す。</td>
+        <td>一覧のいちばん上に「削除しました」が表示され、Aが消えた全7件の一覧が表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-48" value="OK"> OK</label><label><input
+                type="radio" name="result-48" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目48の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="49" data-source="5-2／5-3">
+        <th scope="row">49</th>
+        <td>存在しない番号の編集画面を開く</td>
+        <td>項目20で控えたAの番号を使い、http://localhost:8080/todos/その番号/edit を開く。</td>
+        <td>一覧に戻り、いちばん上に「見つかりませんでした」と全7件が表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-49" value="OK"> OK</label><label><input
+                type="radio" name="result-49" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目49の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="50" data-source="5-2／5-3">
+        <th scope="row">50</th>
+        <td>存在しない番号の削除確認を開く</td>
+        <td>同じAの番号を使い、http://localhost:8080/todos/その番号/delete を開く。</td>
+        <td>一覧に戻り、いちばん上に「見つかりませんでした」と全7件が表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-50" value="OK"> OK</label><label><input
+                type="radio" name="result-50" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目50の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="51" data-source="1 削除／4 削除確認／5-3／依頼の後片付け">
+        <th scope="row">51</th>
+        <td>後片付けとして、追加したBを削除する</td>
+        <td>一覧のBの「削除」を押し、Bであることを確認して「消す」を押す。</td>
+        <td>一覧のいちばん上に「削除しました」が表示され、Bが消えた全6件の一覧が表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-51" value="OK"> OK</label><label><input
+                type="radio" name="result-51" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目51の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+      <tr data-number="52" data-source="1 削除／4 削除確認／5-3／依頼の後片付け">
+        <th scope="row">52</th>
+        <td>後片付けとして、追加したCを削除して5件へ戻す</td>
+        <td>一覧のCの「削除」を押し、Cであることを確認して「消す」を押す；名前を空欄、ジャンルを「すべて」にして絞り込み、項目1で控えた5件と見比べる。</td>
+        <td>削除直後の一覧のいちばん上に「削除しました」が表示され、続いて絞り込みを解除した一覧にはA・B・Cがなく、開始時の5件だけが表示される。</td>
+        <td class="result-cell">
+          <div class="result-controls"><label><input type="radio" name="result-52" value="OK"> OK</label><label><input
+                type="radio" name="result-52" value="NG"> NG</label></div><span class="print-result"
+            aria-hidden="true">○ OK　○ NG</span>
+        </td>
+        <td><textarea rows="2" aria-label="項目52の備考・NGの内容" placeholder="NGの場合は、何をしたら何が表示されたかを書く"></textarea>
+          <div class="print-note" aria-hidden="true"></div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <section class="mapping" aria-labelledby="mapping-title">
+    <h2 id="mapping-title">仕様書と項目の対応</h2>
+    <ul>
+      <li>1. このアプリでできること：一覧＝1・15・17・19・33・35、登録＝2〜19、編集＝20〜35、削除＝46〜48・51・52、検索＝36〜39・42〜45、並び替え＝1・40〜42。</li>
+      <li>4. 一覧：1・15・17・19・33・35〜48。優先度「高・中・低」と状態「完了・未完了」は15・17・19・33・35、0件の表示文は43・44。</li>
+      <li>4. 登録：2〜11・13・16・18。入力欄・選択肢・初期の空欄は2、「一覧へ」は3。</li>
+      <li>4. 登録の確認：11〜19。文字での表示は11・13・16・18、未入力の表示は16、「書き直す」は12・14、「登録する」は15・17・19。</li>
+      <li>4. 編集：20〜30・34。保存済みの6つの値は20、「一覧へ」は21。</li>
+      <li>4. 編集の確認：29〜35。6つの値の文字表示は31、未入力の表示は34、「書き直す」は30〜32、「保存する」は33・35。</li>
+      <li>4. 削除確認：46〜48・51・52。3つの値と入力欄がないことは46、「やめる」は47、「消す」は48・51・52。</li>
+      <li>5-1. 入力のきまり：登録の空欄・半角/全角空白・256文字・未選択＝4〜10、255文字＝11・13、任意欄の空欄＝16、過去の期限＝18；編集の同じ入力チェック＝22〜30、任意欄の空欄＝34。</li>
+      <li>5-2. 存在しない番号／5-3.「見つかりませんでした」：49・50。実際に削除したAの番号を使います。</li>
+      <li>5-3. 操作のあとに出す文：「登録しました」＝15・17・19、「保存しました」＝33・35、「削除しました」＝48・51・52。</li>
+      <li>5-4.
+        検索と並び替え：部分一致（名前の一部が含まれる）＝36、ジャンルの完全一致（同じジャンルだけ）＝37、両方の条件＝38・44、絞り込みなし＝39・45、初期の期限順＝1、近い順／遠い順＝40・41、アドレスでの条件の受け渡しと開き直し＝42、0件＝43・44。
+      </li>
+      <li>依頼された後片付け：48でAを削除した後、51・52で残りの追加行を削除し、開始時の5件へ戻します。</li>
+    </ul>
+  </section>
+  <script>
+    "use strict";
+    const table = document.getElementById("test-table");
+    const notes = Array.from(table.querySelectorAll("textarea"));
+
+    function fitNote(note) {
+      note.style.height = "auto";
+      note.style.height = Math.ceil(note.scrollHeight + 2) + "px";
+    }
+
+    function preparePrint() {
+      for (const row of table.tBodies[0].rows) {
+        const note = row.querySelector("textarea");
+        fitNote(note);
+        // 印刷では入力値を通常の文字に写し、長文がページをまたいでも切れないようにする。
+        row.querySelector(".print-note").textContent = note.value;
+        const selected = row.querySelector('input[type="radio"]:checked');
+        row.querySelector(".print-result").textContent =
+          (selected && selected.value === "OK" ? "●" : "○") + " OK　" +
+          (selected && selected.value === "NG" ? "●" : "○") + " NG";
+      }
+    }
+
+    for (const note of notes) {
+      note.addEventListener("input", () => fitNote(note));
+      fitNote(note);
+    }
+    window.addEventListener("resize", () => notes.forEach(fitNote));
+    window.addEventListener("beforeprint", preparePrint);
+    window.addEventListener("afterprint", () => notes.forEach(fitNote));
+    document.getElementById("save-pdf").addEventListener("click", () => {
+      preparePrint();
+      window.print();
+    });
+  </script>
+</body>
+
+</html>
