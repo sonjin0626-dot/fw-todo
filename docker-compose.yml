@@ -5,6 +5,8 @@ services:
     environment:
       MYSQL_DATABASE: todoapp
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      TZ: Asia/Tokyo
+    command: --default-time-zone=+09:00
     ports:
       - "3306:3306"
     volumes:

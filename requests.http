@@ -1,0 +1,35 @@
+GET http://localhost:8080/api/todos?category=就職活動
+
+### 1. 1件登録する
+POST http://localhost:8080/api/todos
+Content-Type: application/json
+
+{
+  "title": "ハリーポッター",
+  "category": "プログラミング",
+  "priority": 1,
+  "dueDate": "2026-10-31"
+}
+
+### 2. 1件取得する
+GET http://localhost:8080/api/todos/1
+
+### 3. 1件更新する
+PUT http://localhost:8080/api/todos/1
+Content-Type: application/json
+
+{
+  "title": "Javaの基礎と練習問題に取り組む",
+  "detail": null,
+  "category": "プログラミング",
+  "priority": 1,
+  "dueDate": "2026-10-31",
+  "completed": false
+}
+
+### 4. 1件削除する
+DELETE http://localhost:8080/api/todos/19
+
+
+### 5. 祝日を直接取ってくる
+GET https://holidays-jp.github.io/api/v1/date.json
