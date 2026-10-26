@@ -29,6 +29,7 @@
             <a class="link" th:href="@{/todos(keyword=${keyword},category=${category},order='asc')}">期限が近い順</a>
             <a class="link" th:href="@{/todos(keyword=${keyword},category=${category},order='desc')}">期限が遠い順</a>
             <a class="btn" th:href="@{/todos/new}">新規登録</a>
+            <a class="link" th:href="@{/calendar}">カレンダーで見る</a>
         </form>
         <p th:if="${#lists.isEmpty(todos)}">まだ1件も登録されていません</p>
         <table class="todo-table" th:unless="${#lists.isEmpty(todos)}">

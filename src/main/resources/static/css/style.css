@@ -117,3 +117,57 @@ body {
     color: #334155;
     text-decoration: underline;
 }
+
+.calendar-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.calendar-nav-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.calendar-table .todo-name {
+    display: block;
+}
+
+.calendar-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.calendar-table th,
+.calendar-table td {
+    border: 1px solid #94a3b8;
+    padding: 8px;
+}
+
+.calendar-table th {
+    background: #f1f5f9;
+    text-align: center;
+}
+
+.calendar-table td {
+    height: 96px;
+    vertical-align: top;
+}
+
+.calendar-table th:first-child,
+.calendar-table td:first-child {
+    color: #b91c1c;
+}
+
+.calendar-table th:last-child,
+.calendar-table td:last-child {
+    color: #1d4ed8;
+}
+
+.calendar-table td:not([data-date]) {
+    background: #f8fafc;
+}

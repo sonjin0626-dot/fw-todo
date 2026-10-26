@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>カレンダー</title>
+    <link rel="stylesheet" href="/css/style.css" th:href="@{/css/style.css}">
+    <style>
+        .calendar-table td.saturday {
+            background-color: #e0f2fe;
+        }
+
+        .calendar-table td.sunday {
+            background-color: #fce7f3;
+        }
+
+        .calendar-table td.holiday {
+            background-color: #fef3c7;
+        }
+
+        .calendar-table .todo-name,
+        .calendar-table .todo-more {
+            color: #334155;
+        }
+
+        .calendar-table .todo-name.overdue {
+            color: #b91c1c;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <p id="holidays-unavailable" role="status" hidden>祝日を取れませんでした</p>
+        <h1 class="page-title" th:text="|${displayMonth.year}年${displayMonth.monthValue}月|">カレンダー</h1>
+        <nav class="calendar-nav" aria-label="カレンダーの操作">
+            <div class="calendar-nav-group">
+                <a class="link" th:href="@{/calendar(year=${previousMonth.year},month=${previousMonth.monthValue})}">前の月</a>
+                <a class="link" th:href="@{/calendar(year=${nextMonth.year},month=${nextMonth.monthValue})}">次の月</a>
+            </div>
+            <div class="calendar-nav-group">
+                <a class="link" th:href="@{/todos}">表で見る</a>
+                <a class="btn" th:href="@{/todos/new}">新規登録</a>
+            </div>
+        </nav>
+        <table class="calendar-table" aria-label="月間カレンダー" th:attr="data-from=${firstDate},data-to=${lastDate}">
+            <thead>
+                <tr>
+                    <th scope="col">日</th>
+                    <th scope="col">月</th>
+                    <th scope="col">火</th>
+                    <th scope="col">水</th>
+                    <th scope="col">木</th>
+                    <th scope="col">金</th>
+                    <th scope="col">土</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="week : ${weeks}">
+                    <td th:each="date : ${week}" th:attr="data-date=${date}">
+                        <span th:if="${date != null}" th:text="${date.dayOfMonth}"></span>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        const table = document.querySelector('table[data-from]');
+        const from = table.dataset.from;
+        const to = table.dataset.to;
+
+        async function loadTodos() {
+            try {
+                const res = await fetch(`/api/todos?from=${from}&to=${to}`);
+                if (!res.ok) {
+                    throw new Error('やることを取得できませんでした。');
+                }
+                const todos = await res.json();
+                const now = new Date();
+                const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+                for (const cell of table.querySelectorAll('td[data-date]')) {
+                    const dailyTodos = todos.filter(todo => todo.dueDate === cell.dataset.date);
+                    for (const todo of dailyTodos.slice(0, 3)) {
+                        const name = document.createElement('a');
+                        name.classList.add('todo-name');
+                        name.href = `/todos/${todo.id}/edit`;
+                        name.textContent = todo.title;
+                        if (todo.dueDate < today && todo.completed !== true) {
+                            name.classList.add('overdue');
+                        }
+                        cell.appendChild(name);
+                    }
+                    if (dailyTodos.length > 3) {
+                        const more = document.createElement('div');
+                        more.classList.add('todo-more');
+                        more.textContent = `ほか ${dailyTodos.length - 3}件`;
+                        cell.appendChild(more);
+                    }
+                }
+            } catch (error) {
+                console.error('やることの読み込みに失敗しました。', error);
+            }
+        }
+
+        async function loadHolidays() {
+            const cells = table.querySelectorAll('td[data-date]');
+            const unavailable = document.getElementById('holidays-unavailable');
+
+            for (const cell of cells) {
+                const day = new Date(`${cell.dataset.date}T00:00:00`).getDay();
+                if (day === 6) {
+                    cell.classList.add('saturday');
+                } else if (day === 0) {
+                    cell.classList.add('sunday');
+                }
+            }
+
+            try {
+                const res = await fetch(`/api/holidays?from=${from}&to=${to}`);
+                if (res.headers.has('X-Holidays-Unavailable')) {
+                    unavailable.hidden = false;
+                }
+                if (!res.ok) {
+                    throw new Error('祝日を取得できませんでした。');
+                }
+                const holidays = await res.json();
+
+                for (const cell of cells) {
+                    const holidayName = holidays[cell.dataset.date];
+                    if (holidayName) {
+                        cell.classList.add('holiday');
+                        cell.title = holidayName;
+                    }
+                }
+            } catch (error) {
+                unavailable.hidden = false;
+                console.error('祝日の読み込みに失敗しました。', error);
+            }
+        }
+
+        loadTodos();
+        loadHolidays();
+    </script>
+</body>
+
+</html>

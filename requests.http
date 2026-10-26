@@ -28,8 +28,51 @@ Content-Type: application/json
 }
 
 ### 4. 1件削除する
-DELETE http://localhost:8080/api/todos/19
+DELETE http://localhost:8080/api/todos/24
+### 4. 1件削除する
+DELETE http://localhost:8080/api/todos/25
+### 4. 1件削除する
+DELETE http://localhost:8080/api/todos/26
 
 
 ### 5. 祝日を直接取ってくる
 GET https://holidays-jp.github.io/api/v1/date.json
+
+### 6. 自分のアプリの祝日API
+GET http://localhost:8080/api/holidays
+
+### 7. 期間指定で取得する
+GET http://localhost:8080/api/todos?from=2026-04-01&to=2026-04-30
+
+### 8. 就職活動に向けて履歴書を準備する
+POST http://localhost:8080/api/todos
+Content-Type: application/json
+
+{
+  "title": "応募先に提出する履歴書を仕上げる",
+  "category": "就職活動",
+  "priority": 1,
+  "dueDate": "2026-10-22"
+}
+
+### 9. 技術面接に向けて課題を練習する
+POST http://localhost:8080/api/todos
+Content-Type: application/json
+
+{
+  "title": "技術面接に向けてJavaの課題を練習する",
+  "category": "プログラミング",
+  "priority": 2,
+  "dueDate": "2026-10-22"
+}
+
+### 10. 応募先で役立つ資格の学習計画を立てる
+POST http://localhost:8080/api/todos
+Content-Type: application/json
+
+{
+  "title": "応募先で役立つ資格の学習計画を立てる",
+  "category": "資格",
+  "priority": 3,
+  "dueDate": "2026-10-22"
+}
