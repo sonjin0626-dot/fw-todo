@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.context.request.ServletWebRequest;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import com.example.todoapp.api.RestExceptionHandler;
 
 @Slf4j
@@ -24,6 +25,16 @@ public class GlobalExceptionHandler {
 
     public GlobalExceptionHandler(RestExceptionHandler restHandler) {
         this.restHandler = restHandler;
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public String handleUploadTooLarge(MaxUploadSizeExceededException exception, Model model,
+            HttpServletRequest request, HttpServletResponse response) {
+        log.warn("添付ファイルのサイズ超過: path={}", request.getRequestURI());
+        response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE.value());
+        model.addAttribute("errorCode", "ATTACHMENT_TOO_LARGE");
+        model.addAttribute("errorMessage", "ファイルは1つずつ、10MB以下で添付してください。");
+        return "error/business";
     }
 
     @ExceptionHandler(TodoNotFoundException.class)

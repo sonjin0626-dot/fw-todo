@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>添付ファイル</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <div class="container">
+        <nav th:replace="~{fragments/account :: account}"></nav>
+        <h1 class="page-title">添付ファイル</h1>
+        <h2 th:text="${todo.title}"></h2>
+        <p class="flash" role="status" th:if="${message != null}" th:text="${message}"></p>
+        <p class="error" role="alert" th:if="${error != null}" th:text="${error}"></p>
+        <form class="attachment-upload" th:action="@{/todos/{id}/attach(id=${todo.id})}"
+              method="post" enctype="multipart/form-data">
+            <div class="form-row">
+                <label class="form-label" for="file">ファイルを選択</label>
+                <input class="form-input" type="file" id="file" name="file" required
+                       accept=".pdf,.txt,.csv,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+                       aria-describedby="attachment-help">
+            </div>
+            <p id="attachment-help">1ファイル10MBまで。PDF、テキスト、CSV、画像（PNG・JPEG・GIF・WebP）、Word、Excel、PowerPointを添付できます。</p>
+            <button class="btn" type="submit">添付する</button>
+        </form>
+        <h2>添付済みファイル</h2>
+        <p th:if="${#lists.isEmpty(attachments)}">添付ファイルはありません。</p>
+        <div class="attachment-table-wrapper" th:unless="${#lists.isEmpty(attachments)}">
+            <table class="todo-table attachment-table">
+                <thead><tr><th scope="col">ファイル名</th><th scope="col">サイズ</th><th scope="col">添付日時</th><th scope="col">操作</th></tr></thead>
+                <tbody>
+                    <tr th:each="attachment : ${attachments}">
+                        <td><a class="link" th:href="@{/todos/attachments/{id}/download(id=${attachment.id})}"
+                               th:text="${attachment.originalFilename}"></a></td>
+                        <td th:text="|${#numbers.formatDecimal(attachment.fileSize / 1024.0, 1, 1)} KB|"></td>
+                        <td th:text="${#temporals.format(attachment.uploadedAt, 'yyyy-MM-dd HH:mm')}"></td>
+                        <td>
+                            <form th:action="@{/todos/attachments/{id}/delete(id=${attachment.id})}" method="post"
+                                  onsubmit="return window.confirm('この添付ファイルを削除しますか？');">
+                                <button class="btn btn-danger" type="submit">削除</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <a class="btn sub" th:href="@{/todos/{id}/edit(id=${todo.id})}">ToDoを編集</a>
+        <a class="btn sub" th:href="@{/todos}">一覧へ</a>
+    </div>
+</body>
+</html>

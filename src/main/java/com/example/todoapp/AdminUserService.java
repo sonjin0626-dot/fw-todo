@@ -19,11 +19,13 @@ public class AdminUserService {
     private final UserMapper users;
     private final TodoMapper todos;
     private final PasswordEncoder encoder;
+    private final FileStorageService files;
 
-    public AdminUserService(UserMapper users, TodoMapper todos, PasswordEncoder encoder) {
+    public AdminUserService(UserMapper users, TodoMapper todos, PasswordEncoder encoder, FileStorageService files) {
         this.users = users;
         this.todos = todos;
         this.encoder = encoder;
+        this.files = files;
     }
 
     public List<User> findAll() { return users.findAll(); }
@@ -75,6 +77,7 @@ public class AdminUserService {
         if (isCurrentUser(target)) {
             throw new BusinessException("SELF_DELETE", "自分自身のアカウントは削除できません");
         }
+        files.deleteFilesForUser(id);
         todos.deleteByUserId(id);
         users.deleteById(id);
     }

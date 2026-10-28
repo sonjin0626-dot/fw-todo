@@ -294,3 +294,16 @@ body {
     margin: 0;
     overflow-wrap: anywhere;
 }
+
+.attachment-upload {
+    margin-bottom: 24px;
+}
+
+.attachment-table-wrapper {
+    overflow-x: auto;
+    margin-bottom: 20px;
+}
+
+.attachment-table td:first-child {
+    overflow-wrap: anywhere;
+}

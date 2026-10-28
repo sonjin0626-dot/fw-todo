@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS todo_attachments (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    todo_id BIGINT NOT NULL,
+    original_filename VARCHAR(255) NOT NULL,
+    stored_filename VARCHAR(100) NOT NULL UNIQUE,
+    content_type VARCHAR(100) NOT NULL,
+    file_size BIGINT NOT NULL,
+    uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_attachments_todo FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE
+) DEFAULT CHARACTER SET utf8mb4;

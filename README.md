@@ -179,6 +179,23 @@ SELECT id, todo_id, actor_user_id, action, created_at
 FROM audit_logs ORDER BY id DESC LIMIT 50;
 ```
 
+## ファイル添付
+
+ToDo一覧または編集画面の「添付ファイル」から、ファイルの追加・一覧表示・ダウンロード・削除を行えます。新しいToDoは先に登録してください。添付画面は `/todos/{id}/attach` です。元の日本語ファイル名を表示・ダウンロードに使用し、保存名はUUIDに置き換えます。同名ファイルを複数添付しても上書きしません。
+
+- 1ファイル10MBまで。1回に1ファイルを送信します。multipart全体の上限はヘッダー分を含めて11MBです。サイズ超過は画面で説明し、Servletによる拒否はHTTP 413を返します。
+- 許可する拡張子は `.pdf`、`.txt`、`.csv`、`.png`、`.jpg`、`.jpeg`、`.gif`、`.webp`、`.doc`、`.docx`、`.xls`、`.xlsx`、`.ppt`、`.pptx` です。パスを含む名前、制御文字、不正な拡張子を拒否します。拡張子の検査を行い、ウイルススキャンは実装していません。
+- 一般ユーザーは自分のToDoだけ、管理者は全ユーザーのToDoの添付を操作できます。ダウンロード・削除でも所有者を検査し、POSTには既存のCSRF保護を適用します。ダウンロードは `Content-Disposition: attachment` と日本語ファイル名を指定し、キャッシュを禁止します。
+- ToDoをゴミ箱に移すと、添付を保持したままアクセスを停止します。復元すると再び利用できます。管理者がユーザーを物理削除すると、ゴミ箱・完了済みを含む関連添付も削除します。
+
+`application.properties` の `app.upload.dir`（環境変数 `APP_UPLOAD_DIR`、既定値 `./uploads`）に実ファイル、`todo_attachments` テーブルにメタ情報を保存します。保存先は静的ファイルとして公開せず、認証済みのダウンロード処理で読み出します。アプリ再起動時に `db/attachments.sql` がテーブルを自動作成するため、既存DBの作り直しは不要です。
+
+Docker Composeでは `fw-upload-data` ボリュームを `/app/uploads` にマウントします。コンテナを作り直しても添付は保持されます。DBと添付保存先の両方をバックアップしてください。ローカル保存先はGitとDockerのビルド対象から除外しています。
+
+アップロードは、コピー・DB登録・呼び出し元のトランザクションに失敗した場合に実ファイルも削除します。ユーザー削除と同じ所有者行をロックし、同時のアップロードによって実ファイルだけが残る競合も防ぎます。削除はDBのコミット後に実ファイルを消すため、DBがロールバックした場合はファイルを保持します。コミット後のファイル削除にOSの権限などで失敗した場合はサーバーログに記録します。
+
+主な実装は `TodoAttachment.java`、`AttachmentMapper.java` / `mapper/AttachmentMapper.xml`、`FileStorageService.java`、`TodoAttachmentController.java`、`templates/attachments.html` です。教材のInteger IDを既存のLong IDへ、`/todo` を `/todos` へ合わせ、Spring Boot 4 / Java 21の構成を維持しています。`TodoAttachmentIntegrationTests` では実際のDB・ファイル保存、権限制御、CSRF、日本語名、サイズ上限、ロールバックを検証します。10MBちょうどの受け付けと超過時の413は、組み込みサーバーへ実際のHTTPリクエストを送って確認します。
+
 ## テスト
 
 Windowsでは `mvnw.cmd` がプロジェクト指定のMaven 3.10.0を取得・起動します。動作確認は `.\mvnw.cmd -v`、テストは次のコマンドで実行できます。別途Mavenをインストールする必要はありません。

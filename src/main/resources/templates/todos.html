@@ -109,6 +109,7 @@
                     <td>
                         <span th:unless="${trashMode}">
                             <a class="link" th:href="@{/todos/{id}/edit(id=${todo.id})}">編集</a>
+                            <a class="link" th:href="@{/todos/{id}/attach(id=${todo.id})}">添付ファイル</a>
                             <a class="link" th:href="@{/todos/{id}/delete(id=${todo.id})}">削除</a>
                         </span>
                         <form th:if="${trashMode}" th:action="@{/todos/{id}/restore(id=${todo.id})}" method="post">

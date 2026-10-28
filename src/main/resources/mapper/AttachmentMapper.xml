@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.todoapp.AttachmentMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO todo_attachments
+            (todo_id, original_filename, stored_filename, content_type, file_size, uploaded_at)
+        VALUES
+            (#{todoId}, #{originalFilename}, #{storedFilename}, #{contentType}, #{fileSize}, #{uploadedAt})
+    </insert>
+    <select id="findByTodoId" resultType="com.example.todoapp.TodoAttachment">
+        SELECT * FROM todo_attachments WHERE todo_id = #{todoId} ORDER BY uploaded_at DESC, id DESC
+    </select>
+    <select id="findById" resultType="com.example.todoapp.TodoAttachment">
+        SELECT * FROM todo_attachments WHERE id = #{id}
+    </select>
+    <delete id="delete">
+        DELETE FROM todo_attachments WHERE id = #{id}
+    </delete>
+    <select id="findByUserId" resultType="com.example.todoapp.TodoAttachment">
+        SELECT a.* FROM todo_attachments a JOIN todos t ON t.id = a.todo_id WHERE t.user_id = #{userId}
+    </select>
+</mapper>
