@@ -48,6 +48,7 @@ public class AuthController {
         }
         User user = new User();
         user.setUsername(registrationForm.getUsername());
+        user.setEmail(registrationForm.getEmail());
         user.setPassword(passwordEncoder.encode(registrationForm.getPassword()));
         // フォームから権限は受け取らず、登録ユーザーは必ずUSERにする。
         user.setRole("USER");

@@ -25,6 +25,14 @@ public interface TodoMapper {
 
     Todo findById(Long id);
 
+    List<Todo> findByDeadline(@Param("date") LocalDate date);
+
+    List<Todo> findOverdue(@Param("today") LocalDate today);
+
+    int markReminderNotified(@Param("id") Long id, @Param("dueDate") LocalDate dueDate);
+
+    int markOverdueNotified(@Param("id") Long id, @Param("dueDate") LocalDate dueDate);
+
     Todo findIncludingDeletedById(Long id);
 
     long countTrash(@Param("userId") Long userId, @Param("keyword") String keyword, @Param("category") String category);

@@ -227,16 +227,70 @@ Docker Composeでは `fw-upload-data` ボリュームを `/app/uploads` にマ�
 | `DashboardController.java` / `templates/dashboard.html` | 2つの集計を並列に開始し、`CompletableFuture.allOf(...).get(timeout, TimeUnit.SECONDS)` で結果を待つ。成功時だけ両結果を表示。 |
 | `AsyncProcessingIntegrationTests.java` / `DashboardControllerTests.java` | 実際のSpringプロキシとH2で別スレッド・並列実行・所有者・管理者の範囲・コミット後通知・ロールバック・例外ログを検証。Controllerではタイムアウト・中断・キュー満杯・失敗時の表示を確認。 |
 
-登録後の通知は、現状ではサーバーログへの「ToDo登録完了通知」です。このアプリにはメールアドレス項目とSMTP設定がないため、実際のメールは送信しません。教材の `emailExecutor` という名前を維持しています。メール送信を追加する際は `NotificationService` の通知処理と送信先・SMTP設定を追加してください。待機を再現するための `Thread.sleep` は入れていません。
+登録後の通知は `NotificationService` から `MailService` を呼び出し、所有者のメールアドレスへ送信します。`emailExecutor` を利用し、初期設定では実送信せずログで確認します。詳しくは次の「メール送信通知」を参照してください。待機を再現するための `Thread.sleep` は入れていません。
 
 `taskExecutor` のスレッド名は `Async-`、通知用は `Email-` で始まります。各タスクには呼び出し時の認証を引き継ぎ、実行終了時にワーカースレッドから除去します。これは認証をスレッド単位で保持する既存の `TodoService` を使うためです（[Spring Security公式](https://docs.spring.io/spring-security/reference/servlet/integrations/concurrency.html)）。通知は [Springのトランザクションイベント](https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html) の `AFTER_COMMIT` を使います。同じクラス内で非同期メソッドを直接呼ぶとプロキシを通らないため、Controller・Listenerから別のServiceへ呼び出します。
 
 集計の待機時間は `application.properties` の `app.async.report-timeout-seconds=3` で変更できます。タイムアウト・キュー満杯・中断ではHTTP 503、予期しない集計失敗では500を返し、画面に再集計の案内を表示します。非同期側の認可失敗は既存の403画面へ引き継ぎます。タイムアウトは画面の待機を終えるもので、既に実行中のDB処理は継続する場合があります。
 
-通知はメモリ上のキューで処理するため、アプリの強制終了やキュー満杯のときの配信保証・自動再送はありません。既存AOPの実行時間は各Serviceメソッドの計測で、Controller全体の待機時間ではありません。
+登録通知はメモリ上のキューで処理するため、アプリの強制終了やキュー満杯のときの配信保証はありません。SMTP送信時の再試行は次節の設定に従います。既存AOPの実行時間は各Serviceメソッドの計測で、Controller全体の待機時間ではありません。
 
 ```powershell
 .\mvnw.cmd "-Dtest=AsyncProcessingIntegrationTests,DashboardControllerTests" test
+```
+
+## メール送信通知
+
+教材の `deadline` / `description` を既存の `dueDate` / `detail` に、通知先URLを `/todos/{id}/edit` に合わせ、Spring Boot 4 / Java 21 / Long型IDを維持しています。
+
+- ToDo作成時：DBコミット後に既存の `TodoCreatedListener` → `NotificationService` → `MailService` を呼び、`emailExecutor` でテキストメールを送信します。保存をロールバックした場合は送信しません。SMTP送信失敗は登録結果を変更しません。
+- 毎日9時（既定は日本時間）：明日が期限の未完了ToDoを所有者へ通知します。Thymeleafの `templates/mail/reminder.html` を使い、UTF-8のHTMLとプレーンテキストのマルチパートメールを送信します。タイトル・メモはHTMLエスケープされます。
+- 期限切れ：起動1分後から1時間間隔で確認します。同じ期限について送信成功済みのToDoは再送しません。完了済み・ゴミ箱内・期限未設定のToDo、メールアドレス未設定・無効・削除済みのユーザーを除外します。
+- 通知先は、アカウント登録時の任意項目「メールアドレス」で設定します。既存アカウントは管理者のユーザー編集画面で設定・変更・消去できます。空欄の場合は通知しません。入力はサーバー側でも形式・254文字以内を検証します。
+
+既存DBは起動時に `TodoOwnershipSchemaInitializer` が `users.email`、`todos.reminder_notified_date`、`todos.overdue_notified_date` を追加します。データの削除や既存メールアドレスの上書きは行いません。通知済みの値は対象の期限日です。期限の変更、完了から未完了への変更時にはリセットします。通知済み管理の更新だけではToDoの更新日時を変更しません。
+
+### 開発時の確認
+
+`app.mail.enabled=false` が初期値です。SMTPへ接続せず、形式と対象ToDo IDをログに記録します。宛先・本文・認証情報は通知ログに出しません。プレビューでは通知済みにしないため、実送信を有効にしてから通知できます。定期処理も止める場合は `APP_MAIL_REMINDERS_ENABLED=false` を設定します。
+
+### Gmailで実送信する
+
+Gmailのアプリパスワードを用意し、起動プロセスの環境変数を設定します。通常のGoogleログインパスワードは使いません。送信元はSMTPで認証するアドレスに合わせてください。
+
+```powershell
+$env:APP_MAIL_ENABLED='true'
+$env:SPRING_MAIL_USERNAME='your-email@gmail.com'
+$env:SPRING_MAIL_PASSWORD='your-app-password'
+$env:APP_MAIL_FROM='your-email@gmail.com'
+$env:APP_BASE_URL='http://localhost:8080'
+.\mvnw.cmd spring-boot:run
+```
+
+Docker Composeでは `.env.example` を参考に `.env` へ同じ値を設定してアプリを再作成します。`.env` はGit管理対象外です。ローカル起動では `.env` は自動読込されないため、上記の環境変数を使ってください。公開環境では `APP_BASE_URL` を利用者がアクセスできるHTTPS URLへ変更します。メール内のリンクも通常のログイン・所有者確認を通ります。
+
+| 環境変数 | 既定値・用途 |
+| --- | --- |
+| `APP_MAIL_ENABLED` | `false`。`true` でSMTP実送信 |
+| `SPRING_MAIL_HOST` / `SPRING_MAIL_PORT` | `smtp.gmail.com` / `587`。SMTP認証とSTARTTLS必須 |
+| `SPRING_MAIL_USERNAME` / `SPRING_MAIL_PASSWORD` | SMTPユーザー名 / アプリパスワード |
+| `APP_MAIL_FROM` | ローカルではSMTPユーザー名、未設定なら `noreply@example.com`。Composeでは明示設定 |
+| `APP_BASE_URL` | `http://localhost:8080` |
+| `APP_MAIL_REMINDERS_ENABLED` | `true`。定期処理を有効化 |
+| `APP_MAIL_ZONE` | `Asia/Tokyo`。cron・日付判定の共通タイムゾーン |
+| `APP_MAIL_REMINDER_CRON` | `0 0 9 * * *`。`-` で毎日の処理を停止 |
+| `APP_MAIL_MAX_ATTEMPTS` | `3`（1〜5）。1件あたりのSMTP送信試行上限 |
+
+SMTPの接続・読込・書込タイムアウトはそれぞれ5秒です。`MailSendException` は上限まで再試行し、認証エラーは即時失敗として記録します。期限切れ通知に失敗した場合は未送信のまま保持し、次の定期チェックでも再試行します。毎日のリマインダーが全試行に失敗した場合、翌日は期限当日なのでリマインダー対象外となり、期限超過後の通知対象になります。
+
+作成通知の永続キュー、停止中の9時の処理の補完、複数アプリ間の排他制御は実装していません。定期通知は単一アプリで実行してください。SMTPが受信した直後の通信切断や、送信成功後のDB更新・アプリ停止によって重複配信が起こる可能性があります。
+
+メール処理の引数・本文が既存AOPログへ流れないよう、`LoggingAspect` から `MailService` を除外しています。実装は [Spring公式のメール機能](https://docs.spring.io/spring-framework/reference/integration/email.html) と [トランザクションイベント](https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html) の仕組みに沿っています。
+
+`MailServiceTests` は実際のMIMEメッセージ・テンプレートで日本語、HTMLエスケープ、代替テキスト、再試行、実送信無効化を検証します。`MailNotificationIntegrationTests` はH2とSMTPモックで通知対象・所有者・日本時間・非同期送信・コミット/ロールバック・通知済み管理・メールアドレスの保存を検証します。テストは外部へメールを送信しません。
+
+```powershell
+.\mvnw.cmd "-Dtest=MailServiceTests,MailNotificationIntegrationTests,TodoOwnershipSchemaInitializerTests" test
 ```
 
 ## テスト

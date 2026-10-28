@@ -27,7 +27,8 @@ public class LoggingAspect {
     private static final Logger logger = LoggerFactory.getLogger(LoggingAspect.class);
 
     // serviceパッケージではなく、既存の@Serviceクラスを対象にする。
-    @Pointcut("@within(org.springframework.stereotype.Service) && execution(public * com.example.todoapp..*(..))")
+    @Pointcut("@within(org.springframework.stereotype.Service) && execution(public * com.example.todoapp..*(..))"
+            + " && !within(com.example.todoapp.MailService)")
     public void serviceLayer() {
     }
 

@@ -18,6 +18,7 @@ class TodoOwnershipSchemaInitializerTests {
         new ResourceDatabasePopulator(new ClassPathResource("db/users.sql")).execute(dataSource);
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         jdbc.execute("ALTER TABLE users DROP COLUMN updated_at");
+        jdbc.execute("ALTER TABLE users DROP COLUMN email");
         jdbc.execute("CREATE TABLE todos (id BIGINT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(255), "
                 + "completed BOOLEAN DEFAULT FALSE, completed_at DATETIME, deleted_at DATETIME, "
                 + "updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)");
@@ -28,6 +29,10 @@ class TodoOwnershipSchemaInitializerTests {
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
         TodoOwnershipSchemaInitializer initializer = new TodoOwnershipSchemaInitializer(dataSource, encoder);
         initializer.afterPropertiesSet();
+        assertNull(jdbc.queryForObject("SELECT email FROM users LIMIT 1", String.class));
+        jdbc.update("UPDATE users SET email = 'existing@example.com'");
+        assertNull(jdbc.queryForObject("SELECT reminder_notified_date FROM todos LIMIT 1", Object.class));
+        assertNull(jdbc.queryForObject("SELECT overdue_notified_date FROM todos LIMIT 1", Object.class));
         Long sonjinId = jdbc.queryForObject("SELECT id FROM users WHERE username = 'sonjin'", Long.class);
         String hash = jdbc.queryForObject("SELECT password FROM users WHERE username = 'sonjin'", String.class);
         assertTrue(encoder.matches("password", hash));
@@ -44,6 +49,7 @@ class TodoOwnershipSchemaInitializerTests {
         jdbc.update("UPDATE todos SET user_id = ? WHERE title = 'legacy-active'", otherId);
         jdbc.update("UPDATE users SET password = 'changed-password-hash' WHERE id = ?", sonjinId);
         initializer.afterPropertiesSet();
+        assertEquals("existing@example.com", jdbc.queryForObject("SELECT email FROM users WHERE id = ?", String.class, sonjinId));
         assertEquals(otherId, jdbc.queryForObject("SELECT user_id FROM todos WHERE title = 'legacy-active'", Long.class));
         assertEquals("changed-password-hash", jdbc.queryForObject("SELECT password FROM users WHERE id = ?", String.class, sonjinId));
         assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM users", Integer.class));

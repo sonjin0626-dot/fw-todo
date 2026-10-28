@@ -18,6 +18,11 @@
             <small id="username-help" th:text="#{auth.usernameHelp}">半角英数字・ハイフン・アンダースコアの3〜50文字</small>
         </div>
         <div class="form-row">
+            <label for="email" th:text="#{auth.email}">メールアドレス（任意）</label>
+            <input class="form-input" type="email" th:field="*{email}" maxlength="254" autocomplete="email" aria-describedby="email-help">
+            <small id="email-help" th:text="#{auth.emailHelp}">設定すると、ToDo作成通知と期限通知を受け取れます。</small>
+        </div>
+        <div class="form-row">
         <label for="role" th:text="#{admin.role}">ロール</label>
         <select class="form-input" th:field="*{role}">
             <option value="USER" th:text="#{admin.roleUser}">USER（一般ユーザー）</option>

@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS todos (
     category VARCHAR(255) NOT NULL,
     priority INT NOT NULL DEFAULT 2,
     due_date DATE NULL DEFAULT NULL,
+    reminder_notified_date DATE NULL,
+    overdue_notified_date DATE NULL,
     completed BOOLEAN NOT NULL DEFAULT 0,
     completed_at DATETIME NULL DEFAULT NULL,
     deleted_at DATETIME NULL DEFAULT NULL,

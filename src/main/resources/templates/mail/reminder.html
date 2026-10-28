@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title>ToDo期限通知</title></head>
+<body style="font-family: sans-serif; color: #333;">
+    <h2 style="color: #c0392b;" th:text="${heading}">明日が期限です</h2>
+    <div style="background: #f5f5f5; padding: 20px; border-radius: 8px;">
+        <p><strong>タイトル: </strong><span th:text="${todo.title}"></span></p>
+        <p><strong>期限: </strong><span th:text="${todo.dueDate}"></span></p>
+        <p th:if="${todo.detail != null}"><strong>メモ: </strong><span th:text="${todo.detail}"></span></p>
+    </div>
+    <p><a th:href="${todoUrl}" style="color: #2471a3;">ToDoを確認する</a></p>
+</body>
+</html>

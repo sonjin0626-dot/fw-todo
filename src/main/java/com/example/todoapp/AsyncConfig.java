@@ -19,7 +19,7 @@ public class AsyncConfig implements AsyncConfigurer {
         return executor(5, 10, 25, "Async-");
     }
 
-    // 教材のメール用プール。現状は登録完了通知のログ出力に使用する。
+    // 登録確定後のメール通知用プール。
     @Bean(name = "emailExecutor")
     public ThreadPoolTaskExecutor emailExecutor() {
         return executor(2, 5, 100, "Email-");

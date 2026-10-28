@@ -11,6 +11,10 @@ import lombok.Setter;
 @Getter
 @Setter
 public class RegistrationForm {
+    @jakarta.validation.constraints.Email(message = "{validation.email}")
+    @Size(max = 254, message = "{validation.email}")
+    private String email;
+
     @NotBlank(message = "{validation.usernameRequired}")
     @Pattern(regexp = "[a-zA-Z0-9_-]{3,50}", message = "{validation.usernamePattern}")
     private String username;

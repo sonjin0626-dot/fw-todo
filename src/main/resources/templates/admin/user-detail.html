@@ -13,6 +13,7 @@
     <dl class="user-detail">
         <dt>ID</dt><dd th:text="${managedUser.id}"></dd>
         <dt th:text="#{auth.username}">ユーザー名</dt><dd th:text="${managedUser.username}"></dd>
+        <dt th:text="#{auth.email}">メールアドレス（任意）</dt><dd th:text="${managedUser.email}"></dd>
         <dt th:text="#{admin.role}">ロール</dt><dd th:text="${managedUser.role}"></dd>
         <dt th:text="#{common.status}">状態</dt><dd th:text="${managedUser.enabled ? #messages.msg('admin.enabled') : #messages.msg('admin.disabled')}"></dd>
         <dt th:text="#{admin.createdAt}">登録日時</dt><dd th:text="${#temporals.format(managedUser.createdAt, 'yyyy/MM/dd HH:mm:ss')}"></dd>

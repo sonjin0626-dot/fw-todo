@@ -42,6 +42,7 @@ public class AdminUserController {
         User user = users.findById(id);
         UserEditForm form = new UserEditForm();
         form.setUsername(user.getUsername());
+        form.setEmail(user.getEmail());
         form.setRole(user.getRole());
         form.setEnabled(user.isEnabled());
         model.addAttribute("managedUser", user);
@@ -59,6 +60,9 @@ public class AdminUserController {
     public String update(@PathVariable Long id, @Valid @ModelAttribute("form") UserEditForm form,
             BindingResult result, Model model, HttpServletRequest request, RedirectAttributes redirect) {
         User target = users.findById(id);
+        if (request.getParameter("email") == null) {
+            form.setEmail(target.getEmail());
+        }
         // 既存のロール・有効状態だけを送るPOSTも引き続き受け付ける。
         if (request.getParameter("username") == null) {
             form.setUsername(target.getUsername());

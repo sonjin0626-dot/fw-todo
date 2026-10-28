@@ -61,6 +61,7 @@ public class AdminUserService {
             throw new BusinessException("SELF_ACCESS_CHANGE", "自分自身の管理者権限・有効状態は解除できません");
         }
         user.setUsername(form.getUsername());
+        user.setEmail(form.getEmail());
         user.setRole(form.getRole());
         user.setEnabled(form.isEnabled());
         // 管理画面では既存ハッシュを取得せず、空欄ならSQLでパスワードを保持する。

@@ -76,6 +76,26 @@
     <select id="findIncludingDeletedById" resultType="com.example.todoapp.Todo">
         SELECT id, user_id FROM todos WHERE id = #{id}
     </select>
+    <select id="findByDeadline" resultType="com.example.todoapp.Todo">
+        SELECT id, user_id, title, detail, due_date, completed FROM todos
+        WHERE due_date = #{date} AND completed = false AND deleted_at IS NULL
+          AND (reminder_notified_date IS NULL OR reminder_notified_date != due_date)
+        ORDER BY id
+    </select>
+    <select id="findOverdue" resultType="com.example.todoapp.Todo">
+        SELECT id, user_id, title, detail, due_date, completed FROM todos
+        WHERE due_date &lt; #{today} AND completed = false AND deleted_at IS NULL
+          AND (overdue_notified_date IS NULL OR overdue_notified_date != due_date)
+        ORDER BY id
+    </select>
+    <update id="markReminderNotified">
+        UPDATE todos SET reminder_notified_date = #{dueDate}, updated_at = updated_at
+        WHERE id = #{id} AND due_date = #{dueDate} AND completed = false AND deleted_at IS NULL
+    </update>
+    <update id="markOverdueNotified">
+        UPDATE todos SET overdue_notified_date = #{dueDate}, updated_at = updated_at
+        WHERE id = #{id} AND due_date = #{dueDate} AND completed = false AND deleted_at IS NULL
+    </update>
     <select id="searchForExport" resultType="com.example.todoapp.Todo">
         SELECT id, user_id, title, detail, category, priority,
                due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at
@@ -107,6 +127,14 @@
     <update id="update" parameterType="com.example.todoapp.Todo">
         UPDATE todos
         SET title = #{title},
+            reminder_notified_date = CASE
+                WHEN (due_date = #{dueDate} OR (due_date IS NULL AND #{dueDate} IS NULL))
+                     AND NOT (completed = true AND COALESCE(#{completed}, completed) = false) THEN reminder_notified_date
+                ELSE NULL END,
+            overdue_notified_date = CASE
+                WHEN (due_date = #{dueDate} OR (due_date IS NULL AND #{dueDate} IS NULL))
+                     AND NOT (completed = true AND COALESCE(#{completed}, completed) = false) THEN overdue_notified_date
+                ELSE NULL END,
             detail = #{detail},
             category = #{category},
             priority = #{priority},

@@ -29,6 +29,15 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       APP_UPLOAD_DIR: /app/uploads
+      APP_MAIL_ENABLED: ${APP_MAIL_ENABLED:-false}
+      SPRING_MAIL_HOST: ${SPRING_MAIL_HOST:-smtp.gmail.com}
+      SPRING_MAIL_PORT: ${SPRING_MAIL_PORT:-587}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-}
+      APP_MAIL_FROM: ${APP_MAIL_FROM:-noreply@example.com}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8080}
+      APP_MAIL_REMINDERS_ENABLED: ${APP_MAIL_REMINDERS_ENABLED:-true}
+      APP_MAIL_ZONE: ${APP_MAIL_ZONE:-Asia/Tokyo}
     volumes:
       - fw-upload-data:/app/uploads
     depends_on:

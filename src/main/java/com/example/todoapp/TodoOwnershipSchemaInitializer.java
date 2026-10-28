@@ -14,7 +14,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/** 既存DBを破棄せずに所有者列・外部キー・アカウント有効状態を追加する。 */
+/** 既存DBを破棄せずに所有者・アカウント・メール通知用の列と外部キーを追加する。 */
 @Component
 @DependsOnDatabaseInitialization
 public class TodoOwnershipSchemaInitializer implements InitializingBean {
@@ -36,6 +36,20 @@ public class TodoOwnershipSchemaInitializer implements InitializingBean {
             String schema = connection.getSchema();
             try (Statement statement = connection.createStatement()) {
                 String usersTable = metadata.storesUpperCaseIdentifiers() ? "USERS" : "users";
+                String emailColumn = metadata.storesUpperCaseIdentifiers() ? "EMAIL" : "email";
+                try (ResultSet columns = metadata.getColumns(catalog, schema, usersTable, emailColumn)) {
+                    if (!columns.next()) {
+                        statement.executeUpdate("ALTER TABLE users ADD COLUMN email VARCHAR(254) NULL");
+                    }
+                }
+                for (String notificationColumn : java.util.List.of("reminder_notified_date", "overdue_notified_date")) {
+                    String name = metadata.storesUpperCaseIdentifiers() ? notificationColumn.toUpperCase(java.util.Locale.ROOT) : notificationColumn;
+                    try (ResultSet columns = metadata.getColumns(catalog, schema, table, name)) {
+                        if (!columns.next()) {
+                            statement.executeUpdate("ALTER TABLE todos ADD COLUMN " + notificationColumn + " DATE NULL");
+                        }
+                    }
+                }
                 String enabledColumn = metadata.storesUpperCaseIdentifiers() ? "ENABLED" : "enabled";
                 try (ResultSet columns = metadata.getColumns(catalog, schema, usersTable, enabledColumn)) {
                     if (!columns.next()) {
