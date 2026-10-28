@@ -1,28 +1,29 @@
 <!DOCTYPE html>
-<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ユーザー詳細 | ToDo</title>
+    <title th:text="#{admin.detailTitle}">ユーザー詳細 | ToDo</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body><main class="container">
+        <nav th:replace="~{fragments/language :: language}"></nav>
     <nav th:replace="~{fragments/account :: account}"></nav>
-    <h1>ユーザー詳細</h1>
+    <h1 th:text="#{admin.detail}">ユーザー詳細</h1>
     <dl class="user-detail">
         <dt>ID</dt><dd th:text="${managedUser.id}"></dd>
-        <dt>ユーザー名</dt><dd th:text="${managedUser.username}"></dd>
-        <dt>ロール</dt><dd th:text="${managedUser.role}"></dd>
-        <dt>状態</dt><dd th:text="${managedUser.enabled ? '有効' : '無効'}"></dd>
-        <dt>登録日時</dt><dd th:text="${#temporals.format(managedUser.createdAt, 'yyyy/MM/dd HH:mm:ss')}"></dd>
-        <dt>更新日時</dt><dd th:text="${#temporals.format(managedUser.updatedAt, 'yyyy/MM/dd HH:mm:ss')}"></dd>
+        <dt th:text="#{auth.username}">ユーザー名</dt><dd th:text="${managedUser.username}"></dd>
+        <dt th:text="#{admin.role}">ロール</dt><dd th:text="${managedUser.role}"></dd>
+        <dt th:text="#{common.status}">状態</dt><dd th:text="${managedUser.enabled ? #messages.msg('admin.enabled') : #messages.msg('admin.disabled')}"></dd>
+        <dt th:text="#{admin.createdAt}">登録日時</dt><dd th:text="${#temporals.format(managedUser.createdAt, 'yyyy/MM/dd HH:mm:ss')}"></dd>
+        <dt th:text="#{admin.updatedAt}">更新日時</dt><dd th:text="${#temporals.format(managedUser.updatedAt, 'yyyy/MM/dd HH:mm:ss')}"></dd>
     </dl>
     <div class="user-actions">
-        <a class="btn" th:href="@{/admin/users/{id}/edit(id=${managedUser.id})}">編集</a>
-        <a class="link" th:href="@{/admin/users}">一覧に戻る</a>
+        <a class="btn" th:href="@{/admin/users/{id}/edit(id=${managedUser.id})}" th:text="#{todo.edit}">編集</a>
+        <a class="link" th:href="@{/admin/users}" th:text="#{common.backList}">一覧に戻る</a>
         <form th:if="${managedUser.username != #authentication.name}" th:action="@{/admin/users/{id}/delete(id=${managedUser.id})}" method="post"
-              onsubmit="return confirm('このユーザーを削除しますか？\nゴミ箱内を含む関連ToDoもすべて削除され、復元できません。')">
-            <button class="btn btn-danger" type="submit">削除</button>
+              th:attr="data-confirm-message=#{admin.deleteConfirm}" onsubmit="return window.confirm(this.dataset.confirmMessage)">
+            <button class="btn btn-danger" type="submit" th:text="#{common.delete}">削除</button>
         </form>
     </div>
 </main></body>

@@ -1,30 +1,31 @@
 <!DOCTYPE html>
-<html lang="ja" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${trashMode ? '消したもの' : '一覧'}">一覧</title>
+    <title th:text="${trashMode ? #messages.msg('todo.trash') : #messages.msg('todo.list')}">一覧</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <div class="container">
+        <nav th:replace="~{fragments/language :: language}"></nav>
         <nav th:replace="~{fragments/account :: account}"></nav>
         <p class="flash" th:if="${message != null}" th:text="${message}"></p>
-        <h1 class="page-title" th:text="${trashMode ? '消したもの' : '一覧'}">一覧</h1>
-        <p sec:authorize="hasRole('USER')">自分のToDo：<span th:text="${totalCount}"></span>件</p>
-        <p sec:authorize="hasRole('ADMIN')">全ユーザーのToDo：<span th:text="${totalCount}"></span>件</p>
+        <h1 class="page-title" th:text="${trashMode ? #messages.msg('todo.trash') : #messages.msg('todo.list')}">一覧</h1>
+        <p sec:authorize="hasRole('USER')" th:text="#{todo.mine(${totalCount})}"></p>
+        <p sec:authorize="hasRole('ADMIN')" th:text="#{todo.allUsers(${totalCount})}"></p>
         <form class="search-bar" th:action="@{/todos}" method="get">
-            <label for="keyword">やること
+            <label for="keyword"><span th:text="#{todo.title}">やること</span>
                 <input class="form-input" type="text" id="keyword" name="keyword" th:value="${keyword}">
             </label>
-            <label for="category">ジャンル
+            <label for="category"><span th:text="#{todo.category}">ジャンル</span>
                 <select class="form-input" id="category" name="category">
-                    <option value="" th:selected="${category == ''}">すべて</option>
-                    <option value="デザイン" th:selected="${category == 'デザイン'}">デザイン</option>
-                    <option value="マーケティング" th:selected="${category == 'マーケティング'}">マーケティング</option>
-                    <option value="プログラミング" th:selected="${category == 'プログラミング'}">プログラミング</option>
-                    <option value="資格" th:selected="${category == '資格'}">資格</option>
-                    <option value="就職活動" th:selected="${category == '就職活動'}">就職活動</option>
+                    <option value="" th:selected="${category == ''}" th:text="#{common.all}">すべて</option>
+                    <option value="デザイン" th:selected="${category == 'デザイン'}" th:text="#{category.design}">デザイン</option>
+                    <option value="マーケティング" th:selected="${category == 'マーケティング'}" th:text="#{category.marketing}">マーケティング</option>
+                    <option value="プログラミング" th:selected="${category == 'プログラミング'}" th:text="#{category.programming}">プログラミング</option>
+                    <option value="資格" th:selected="${category == '資格'}" th:text="#{category.certification}">資格</option>
+                    <option value="就職活動" th:selected="${category == '就職活動'}" th:text="#{category.jobHunting}">就職活動</option>
                 </select>
             </label>
             <input type="hidden" name="order" th:value="${order}">
@@ -32,21 +33,21 @@
             <input type="hidden" name="trash" th:value="${trashMode ? 1 : 0}">
             <input th:if="${trashMode}" type="hidden" name="includeCompleted" value="true">
             <label th:unless="${trashMode}" for="includeCompleted">
-                <input type="checkbox" id="includeCompleted" name="includeCompleted" value="true" th:checked="${includeCompleted}">
+                <input type="checkbox" id="includeCompleted" name="includeCompleted" value="true" th:checked="${includeCompleted}" th:text="#{todo.includeCompleted}">
                 完了したものも表示する
             </label>
-            <button class="btn" type="submit">絞り込む</button>
+            <button class="btn" type="submit" th:text="#{common.filter}">絞り込む</button>
             <a class="btn sub" th:unless="${trashMode}"
                th:href="@{/api/todos.csv(keyword=${keyword},category=${category},order=${order},includeCompleted=${includeCompleted})}"
-               download="todos.csv">CSVを書き出す</a>
-            <a class="link" th:href="@{/todos(keyword=${keyword},category=${category},order='asc',includeCompleted=${includeCompleted},page=1,trash=${trashMode ? 1 : 0})}">期限が近い順</a>
-            <a class="link" th:href="@{/todos(keyword=${keyword},category=${category},order='desc',includeCompleted=${includeCompleted},page=1,trash=${trashMode ? 1 : 0})}">期限が遠い順</a>
-            <a class="btn" th:href="@{/todos/new}">新規登録</a>
-            <a class="link" th:href="@{/calendar}">カレンダーで見る</a>
-            <a class="link" th:unless="${trashMode}" th:href="@{/todos(trash=1)}">消したものを見る</a>
-            <a class="link" th:if="${trashMode}" th:href="@{/todos}">一覧へ</a>
+               download="todos.csv" th:text="#{todo.export}">CSVを書き出す</a>
+            <a class="link" th:href="@{/todos(keyword=${keyword},category=${category},order='asc',includeCompleted=${includeCompleted},page=1,trash=${trashMode ? 1 : 0})}" th:text="#{todo.dueAsc}">期限が近い順</a>
+            <a class="link" th:href="@{/todos(keyword=${keyword},category=${category},order='desc',includeCompleted=${includeCompleted},page=1,trash=${trashMode ? 1 : 0})}" th:text="#{todo.dueDesc}">期限が遠い順</a>
+            <a class="btn" th:href="@{/todos/new}" th:text="#{todo.new}">新規登録</a>
+            <a class="link" th:href="@{/calendar}" th:text="#{calendar.view}">カレンダーで見る</a>
+            <a class="link" th:unless="${trashMode}" th:href="@{/todos(trash=1)}" th:text="#{todo.viewTrash}">消したものを見る</a>
+            <a class="link" th:if="${trashMode}" th:href="@{/todos}" th:text="#{todo.back}">一覧へ</a>
         </form>
-        <p th:if="${#lists.isEmpty(todos)}">条件に合うやることはありません</p>
+        <p th:if="${#lists.isEmpty(todos)}" th:text="#{todo.empty}">条件に合うやることはありません</p>
         <form sec:authorize="hasRole('ADMIN')" th:if="${!trashMode and !#lists.isEmpty(todos)}" id="bulk-delete-form" class="bulk-actions"
               th:action="@{/todos/bulk-delete}" method="post">
             <input type="hidden" name="keyword" th:value="${keyword}">
@@ -54,24 +55,24 @@
             <input type="hidden" name="order" th:value="${order}">
             <input type="hidden" name="includeCompleted" th:value="${includeCompleted}">
             <input type="hidden" name="page" th:value="${page}">
-            <button class="btn" type="submit" id="bulk-delete-button" disabled>選択した項目を削除</button>
-            <span id="bulk-selection-count" role="status">0件選択</span>
-            <small>全選択は、このページに表示中の項目が対象です。</small>
+            <button class="btn" type="submit" id="bulk-delete-button" disabled th:text="#{bulk.delete}">選択した項目を削除</button>
+            <span id="bulk-selection-count" role="status" th:text="#{bulk.count(0)}">0件選択</span>
+            <small th:text="#{bulk.help}">全選択は、このページに表示中の項目が対象です。</small>
         </form>
         <table class="todo-table" th:unless="${#lists.isEmpty(todos)}">
             <thead>
                 <tr>
                     <th sec:authorize="hasRole('ADMIN')" th:unless="${trashMode}" scope="col">
-                        <label><input type="checkbox" id="bulk-select-all">全選択</label>
+                        <label><input type="checkbox" id="bulk-select-all" th:text="#{bulk.all}">全選択</label>
                     </th>
-                    <th th:unless="${trashMode}" scope="col">印</th>
-                    <th sec:authorize="hasRole('ADMIN')" scope="col">所有者ID</th>
-                    <th scope="col">やること</th>
-                    <th scope="col">ジャンル</th>
-                    <th scope="col">優先度</th>
-                    <th scope="col">期限</th>
-                    <th scope="col">状態</th>
-                    <th scope="col">操作</th>
+                    <th th:unless="${trashMode}" scope="col" th:text="#{todo.pin}">印</th>
+                    <th sec:authorize="hasRole('ADMIN')" scope="col" th:text="#{todo.owner}">所有者ID</th>
+                    <th scope="col" th:text="#{todo.title}">やること</th>
+                    <th scope="col" th:text="#{todo.category}">ジャンル</th>
+                    <th scope="col" th:text="#{todo.priority}">優先度</th>
+                    <th scope="col" th:text="#{todo.dueDate}">期限</th>
+                    <th scope="col" th:text="#{common.status}">状態</th>
+                    <th scope="col" th:text="#{common.actions}">操作</th>
                 </tr>
             </thead>
             <tbody>
@@ -80,7 +81,7 @@
                     th:attr="data-due-date=${todo.dueDate},data-completed=${todo.completed}">
                     <td sec:authorize="hasRole('ADMIN')" th:unless="${trashMode}">
                         <input type="checkbox" name="ids" th:value="${todo.id}" form="bulk-delete-form"
-                               th:attr="aria-label=|${todo.title}を選択|">
+                               th:attr="aria-label=#{todo.select(${todo.title})}">
                     </td>
                     <td th:unless="${trashMode}">
                         <form th:action="@{/todos/{id}/pin(id=${todo.id})}" method="post">
@@ -90,36 +91,36 @@
                             <input type="hidden" name="includeCompleted" th:value="${includeCompleted}">
                             <input type="hidden" name="page" th:value="${page}">
                             <button class="btn sub" type="submit" th:attr="aria-pressed=${todo.pinned == true}"
-                                    th:text="${todo.pinned == true ? '印を外す' : '印を付ける'}"></button>
+                                    th:text="${todo.pinned == true ? #messages.msg('todo.pinRemove') : #messages.msg('todo.pinAdd')}"></button>
                         </form>
                     </td>
                     <td sec:authorize="hasRole('ADMIN')" th:text="${todo.userId}"></td>
                     <td th:text="${todo.title}"></td>
-                    <td th:text="${todo.category}"></td>
+                    <td th:text="${#messages.msgOrNull('category.' + todo.category) ?: todo.category}"></td>
                     <td>
                         <span class="priority-mark" th:if="${todo.priority == 1}" aria-hidden="true">★</span>
-                        <span th:text="${todo.priority == 1 ? '高' : (todo.priority == 2 ? '中' : '低')}"></span>
+                        <span th:text="${todo.priority == 1 ? #messages.msg('priority.high') : (todo.priority == 2 ? #messages.msg('priority.medium') : #messages.msg('priority.low'))}"></span>
                     </td>
                     <td th:text="${todo.dueDate == null ? '' : #temporals.format(todo.dueDate, 'yyyy-MM-dd')}"></td>
                     <td>
-                        <span th:text="${todo.completed == true ? '完了' : '未完了'}"></span>
+                        <span th:text="${todo.completed == true ? #messages.msg('todo.completed') : #messages.msg('todo.incomplete')}"></span>
                         <span th:if="${todo.completed == true and todo.completedAt != null}"
                               th:text="|（${#temporals.format(todo.completedAt, 'yyyy-MM-dd')}）|"></span>
                     </td>
                     <td>
                         <span th:unless="${trashMode}">
-                            <a class="link" th:href="@{/todos/{id}/edit(id=${todo.id})}">編集</a>
-                            <a class="link" th:href="@{/todos/{id}/attach(id=${todo.id})}">添付ファイル</a>
-                            <a class="link" th:href="@{/todos/{id}/delete(id=${todo.id})}">削除</a>
+                            <a class="link" th:href="@{/todos/{id}/edit(id=${todo.id})}" th:text="#{todo.edit}">編集</a>
+                            <a class="link" th:href="@{/todos/{id}/attach(id=${todo.id})}" th:text="#{attachment.title}">添付ファイル</a>
+                            <a class="link" th:href="@{/todos/{id}/delete(id=${todo.id})}" th:text="#{common.delete}">削除</a>
                         </span>
                         <form th:if="${trashMode}" th:action="@{/todos/{id}/restore(id=${todo.id})}" method="post">
-                            <button class="btn" type="submit">戻す</button>
+                            <button class="btn" type="submit" th:text="#{todo.restore}">戻す</button>
                         </form>
                     </td>
                 </tr>
             </tbody>
         </table>
-        <nav th:if="${totalCount > 0}" aria-label="一覧のページ">
+        <nav th:if="${totalCount > 0}" th:attr="aria-label=#{todo.pages}">
             <span th:each="pageNumber : ${#numbers.sequence(1, totalPages)}">
                 <strong th:if="${pageNumber == page}" aria-current="page" th:text="${pageNumber}"></strong>
                 <a class="link" th:unless="${pageNumber == page}"
@@ -128,7 +129,9 @@
             </span>
         </nav>
     </div>
-    <script th:unless="${trashMode}">
+    <script th:unless="${trashMode}" th:inline="javascript">
+        const selectionMessage = /*[[#{bulk.count('COUNT_VALUE')}]]*/ "COUNT_VALUE selected";
+        const deleteMessage = /*[[#{bulk.confirm('COUNT_VALUE')}]]*/ "Delete COUNT_VALUE tasks?";
         const bulkForm = document.getElementById('bulk-delete-form');
         const selectAll = document.getElementById('bulk-select-all');
         if (bulkForm && selectAll) {
@@ -138,7 +141,7 @@
             function updateSelection() {
                 const count = checkboxes.filter(checkbox => checkbox.checked).length;
                 deleteButton.disabled = count === 0;
-                selectionCount.textContent = `${count}件選択`;
+                selectionCount.textContent = selectionMessage.replace('COUNT_VALUE', count);
                 selectAll.checked = checkboxes.length > 0 && count === checkboxes.length;
                 selectAll.indeterminate = count > 0 && count < checkboxes.length;
             }
@@ -153,7 +156,7 @@
             }
             bulkForm.addEventListener('submit', event => {
                 const count = checkboxes.filter(checkbox => checkbox.checked).length;
-                if (count === 0 || !window.confirm(`選択した${count}件を削除しますか？「消したもの」から戻せます。`)) {
+                if (count === 0 || !window.confirm(deleteMessage.replace('COUNT_VALUE', count))) {
                     event.preventDefault();
                 }
             });

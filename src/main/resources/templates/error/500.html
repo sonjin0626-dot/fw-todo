@@ -1,16 +1,17 @@
 <!DOCTYPE html>
-<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>500 - システムエラー</title>
+    <title th:text="#{error.systemTitle}">500 - システムエラー</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
 <main class="container auth-container">
-    <h1 class="page-title">500 - システムエラー</h1>
-    <p>システムエラーが発生しました。時間をおいて再度お試しください。</p>
-    <p><a th:href="@{/todos}" class="btn btn-primary">ToDo一覧に戻る</a></p>
+        <nav th:replace="~{fragments/language :: language}"></nav>
+    <h1 class="page-title" th:text="#{error.systemTitle}">500 - システムエラー</h1>
+    <p th:text="#{error.system}">システムエラーが発生しました。時間をおいて再度お試しください。</p>
+    <p><a th:href="@{/todos}" class="btn btn-primary" th:text="#{todo.return}">ToDo一覧に戻る</a></p>
 </main>
 </body>
 </html>

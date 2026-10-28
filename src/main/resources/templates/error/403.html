@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang="ja" xmlns:th="http://www.thymeleaf.org">
-<head><meta charset="UTF-8"><title>アクセスできません</title><link rel="stylesheet" href="/css/style.css"></head>
-<body><main class="container"><h1>この操作を行う権限がありません</h1><p>アカウントの権限・有効状態を確認してください。</p><a th:href="@{/todos}">ToDo一覧へ</a><a th:href="@{/login}">ログインへ</a></main></body>
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<head><meta charset="UTF-8"><title th:text="#{error.forbiddenTitle}">アクセスできません</title><link rel="stylesheet" href="/css/style.css"></head>
+<body><main class="container">
+        <nav th:replace="~{fragments/language :: language}"></nav><h1 th:text="#{error.forbidden}">この操作を行う権限がありません</h1><p th:text="#{error.accountHelp}">アカウントの権限・有効状態を確認してください。</p><a th:href="@{/todos}" th:text="#{todo.goList}">ToDo一覧へ</a><a th:href="@{/login}" th:text="#{auth.goLogin}">ログインへ</a></main></body>
 </html>

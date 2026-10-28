@@ -1,5 +1,8 @@
 package com.example.todoapp;
 
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+
 import java.util.List;
 
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -22,10 +25,15 @@ import jakarta.validation.Valid;
 
 @Controller
 public class HomeController {
+    private final MessageSource messages;
 
+    private String message(String key, Object... args) {
+        return messages.getMessage(key, args, LocaleContextHolder.getLocale());
+    }
     private final TodoService todoService;
 
-    public HomeController(TodoService todoService) {
+    public HomeController(TodoService todoService, MessageSource messages) {
+        this.messages = messages;
         this.todoService = todoService;
     }
 
@@ -36,7 +44,7 @@ public class HomeController {
 
     @GetMapping("/")
     public String index(Model model) {
-        model.addAttribute("title", "やること管理");
+        model.addAttribute("title", message("app.title"));
         return "index";
     }
 
@@ -88,7 +96,7 @@ public class HomeController {
     @PostMapping("/todos")
     public String store(@ModelAttribute("todo") Todo todo, RedirectAttributes redirectAttributes) {
         todoService.create(todo);
-        redirectAttributes.addFlashAttribute("message", "登録しました");
+        redirectAttributes.addFlashAttribute("message", message("flash.created"));
         return "redirect:/todos";
     }
 
@@ -126,7 +134,7 @@ public class HomeController {
             RedirectAttributes redirectAttributes) {
         todo.setId(id);
         todoService.update(todo);
-        redirectAttributes.addFlashAttribute("message", "保存しました");
+        redirectAttributes.addFlashAttribute("message", message("flash.saved"));
         return "redirect:/todos";
     }
 
@@ -144,7 +152,7 @@ public class HomeController {
     @PostMapping("/todos/{id}/delete")
     public String delete(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
         todoService.delete(id);
-        redirectAttributes.addFlashAttribute("message", "削除しました");
+        redirectAttributes.addFlashAttribute("message", message("flash.deleted"));
         return "redirect:/todos";
     }
 
@@ -163,7 +171,7 @@ public class HomeController {
             throw new BusinessException("INVALID_TODO_ID", "削除する項目の番号が正しくありません");
         }
         redirectAttributes.addFlashAttribute("message", ids == null || ids.isEmpty()
-                ? "削除する項目を選んでください" : deleted + "件を削除しました");
+                ? message("flash.selectItems") : message("flash.bulkDeleted", deleted));
         redirectAttributes.addAttribute("keyword", keyword);
         redirectAttributes.addAttribute("category", category);
         redirectAttributes.addAttribute("order", "desc".equals(order) ? "desc" : "asc");
@@ -175,7 +183,7 @@ public class HomeController {
     @PostMapping("/todos/{id}/restore")
     public String restore(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
         boolean restored = todoService.restore(id);
-        redirectAttributes.addFlashAttribute("message", restored ? "戻しました" : "見つかりませんでした");
+        redirectAttributes.addFlashAttribute("message", restored ? message("flash.restored") : message("flash.notFound"));
         return "redirect:/todos?trash=1";
     }
 
@@ -187,7 +195,7 @@ public class HomeController {
             @RequestParam(name = "includeCompleted", defaultValue = "false") boolean includeCompleted,
             @RequestParam(name = "page", defaultValue = "1") int page, RedirectAttributes redirectAttributes) {
         boolean toggled = todoService.togglePinned(id);
-        redirectAttributes.addFlashAttribute("message", toggled ? "印を切り替えました" : "見つかりませんでした");
+        redirectAttributes.addFlashAttribute("message", toggled ? message("flash.pinned") : message("flash.notFound"));
         redirectAttributes.addAttribute("keyword", keyword);
         redirectAttributes.addAttribute("category", category);
         redirectAttributes.addAttribute("order", "desc".equals(order) ? "desc" : "asc");

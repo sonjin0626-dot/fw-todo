@@ -1,59 +1,60 @@
 <!DOCTYPE html>
-<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>編集</title>
+    <title th:text="#{todo.edit}">編集</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <div class="container">
+        <nav th:replace="~{fragments/language :: language}"></nav>
         <nav th:replace="~{fragments/account :: account}"></nav>
-        <h1 class="page-title">編集</h1>
-        <form th:action="@{/todos/{id}/confirm(id=${id})}" th:object="${todo}" method="post">
+        <h1 class="page-title" th:text="#{todo.edit}">編集</h1>
+        <form th:action="@{/todos/{id}/confirm(id=${id})}" th:object="${todo}" method="post" th:attr="data-language-action=@{/todos/{id}/edit(id=${id})}">
             <div class="form-row">
-                <label class="form-label" for="title">やること</label>
+                <label class="form-label" for="title" th:text="#{todo.title}">やること</label>
                 <input class="form-input" type="text" th:field="*{title}">
                 <p class="error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></p>
             </div>
             <div class="form-row">
-                <label class="form-label" for="detail">メモ</label>
+                <label class="form-label" for="detail" th:text="#{todo.detail}">メモ</label>
                 <input class="form-input" type="text" th:field="*{detail}">
                 <p class="error" th:if="${#fields.hasErrors('detail')}" th:errors="*{detail}"></p>
             </div>
             <div class="form-row">
-                <label class="form-label" for="category">ジャンル</label>
+                <label class="form-label" for="category" th:text="#{todo.category}">ジャンル</label>
                 <select class="form-input" th:field="*{category}">
                     <option value=""></option>
-                    <option value="デザイン">デザイン</option>
-                    <option value="マーケティング">マーケティング</option>
-                    <option value="プログラミング">プログラミング</option>
-                    <option value="資格">資格</option>
-                    <option value="就職活動">就職活動</option>
+                    <option value="デザイン" th:text="#{category.design}">デザイン</option>
+                    <option value="マーケティング" th:text="#{category.marketing}">マーケティング</option>
+                    <option value="プログラミング" th:text="#{category.programming}">プログラミング</option>
+                    <option value="資格" th:text="#{category.certification}">資格</option>
+                    <option value="就職活動" th:text="#{category.jobHunting}">就職活動</option>
                 </select>
                 <p class="error" th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></p>
             </div>
             <div class="form-row">
-                <label class="form-label" for="priority">優先度</label>
+                <label class="form-label" for="priority" th:text="#{todo.priority}">優先度</label>
                 <select class="form-input" th:field="*{priority}">
                     <option value=""></option>
-                    <option value="1">高</option>
-                    <option value="2">中</option>
-                    <option value="3">低</option>
+                    <option value="1" th:text="#{priority.high}">高</option>
+                    <option value="2" th:text="#{priority.medium}">中</option>
+                    <option value="3" th:text="#{priority.low}">低</option>
                 </select>
                 <p class="error" th:if="${#fields.hasErrors('priority')}" th:errors="*{priority}"></p>
             </div>
             <div class="form-row">
-                <label class="form-label" for="dueDate">期限</label>
+                <label class="form-label" for="dueDate" th:text="#{todo.dueDate}">期限</label>
                 <input class="form-input" type="date" th:field="*{dueDate}">
             </div>
             <div class="form-row">
-                <label class="form-label" for="completed">完了</label>
+                <label class="form-label" for="completed" th:text="#{todo.completed}">完了</label>
                 <input type="checkbox" id="completed" th:field="*{completed}">
             </div>
-            <button class="btn" type="submit">確認する</button>
-            <a class="btn sub" th:href="@{/todos}">一覧へ</a>
-            <a class="btn sub" th:href="@{/todos/{id}/attach(id=${id})}">添付ファイル</a>
+            <button class="btn" type="submit" th:text="#{common.confirm}">確認する</button>
+            <a class="btn sub" th:href="@{/todos}" th:text="#{todo.back}">一覧へ</a>
+            <a class="btn sub" th:href="@{/todos/{id}/attach(id=${id})}" th:text="#{attachment.title}">添付ファイル</a>
         </form>
     </div>
 </body>

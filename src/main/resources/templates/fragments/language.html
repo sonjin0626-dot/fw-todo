@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <nav th:fragment="language" class="language-switcher" th:attr="aria-label=#{language.label}">
+        <span th:text="#{language.label}">言語</span>:
+        <a class="link" th:href="@{''(lang='ja')}" lang="ja" hreflang="ja" data-language="ja"
+           th:attr="aria-current=${#locale.language == 'ja' ? 'true' : null}">日本語</a>
+        <a class="link" th:href="@{''(lang='en')}" lang="en" hreflang="en" data-language="en"
+           th:attr="aria-current=${#locale.language == 'en' ? 'true' : null}">English</a>
+        <script th:src="@{/js/language.js}" defer></script>
+    </nav>
+</body>
+</html>

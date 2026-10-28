@@ -92,7 +92,12 @@ class TodoDeletionTests {
         assertTrue(tools.findFreeDays("2026-10-28", "2026-10-28").isEmpty());
 
         switch (entry) {
-            case "screen" -> new HomeController(service).delete(id, new RedirectAttributesModelMap());
+            case "screen" -> {
+                var messages = new org.springframework.context.support.ResourceBundleMessageSource();
+                messages.setBasename("messages");
+                messages.setDefaultEncoding("UTF-8");
+                new HomeController(service, messages).delete(id, new RedirectAttributesModelMap());
+            }
             case "api" -> assertEquals(204, api.delete(id).getStatusCode().value());
             case "mcp" -> tools.deleteTodo(id);
             default -> throw new IllegalArgumentException(entry);

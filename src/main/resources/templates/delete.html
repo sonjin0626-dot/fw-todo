@@ -1,25 +1,26 @@
 <!DOCTYPE html>
-<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>削除確認</title>
+    <title th:text="#{todo.confirmDelete}">削除確認</title>
     <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
     <div class="container">
+        <nav th:replace="~{fragments/language :: language}"></nav>
         <nav th:replace="~{fragments/account :: account}"></nav>
-        <h1 class="page-title">削除確認</h1>
+        <h1 class="page-title" th:text="#{todo.confirmDelete}">削除確認</h1>
         <form th:action="@{/todos/{id}/delete(id=${id})}" method="post">
-            <p>やること</p>
+            <p th:text="#{todo.title}">やること</p>
             <p class="confirm-value" th:text="${todo.title}"></p>
-            <p>ジャンル</p>
-            <p class="confirm-value" th:text="${todo.category}"></p>
-            <p>期限</p>
-            <p class="confirm-value" th:text="${todo.dueDate == null ? '（入力なし）' : #temporals.format(todo.dueDate, 'yyyy-MM-dd')}"></p>
+            <p th:text="#{todo.category}">ジャンル</p>
+            <p class="confirm-value" th:text="${#messages.msgOrNull('category.' + todo.category) ?: todo.category}"></p>
+            <p th:text="#{todo.dueDate}">期限</p>
+            <p class="confirm-value" th:text="${todo.dueDate == null ? #messages.msg('todo.emptyValue') : #temporals.format(todo.dueDate, 'yyyy-MM-dd')}"></p>
             <div class="confirm-actions">
-                <button class="btn" type="submit">消す</button>
-                <a class="btn sub" th:href="@{/todos}">やめる</a>
+                <button class="btn" type="submit" th:text="#{common.erase}">消す</button>
+                <a class="btn sub" th:href="@{/todos}" th:text="#{common.cancel}">やめる</a>
             </div>
         </form>
     </div>

@@ -1,17 +1,18 @@
 <!DOCTYPE html>
-<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>404 - ページが見つかりません</title>
+    <title th:text="#{error.notFoundTitle}">404 - ページが見つかりません</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
 <main class="container auth-container">
-    <h1 class="page-title">404 - ページが見つかりません</h1>
-    <p th:text="${errorMessage ?: '指定されたページまたはToDoが見つかりません。URLを確認してください。'}"></p>
+        <nav th:replace="~{fragments/language :: language}"></nav>
+    <h1 class="page-title" th:text="#{error.notFoundTitle}">404 - ページが見つかりません</h1>
+    <p th:text="${errorMessage ?: #messages.msg('error.notFound')}"></p>
     <p th:if="${todoId != null}">ToDo ID：<span th:text="${todoId}"></span></p>
-    <p><a th:href="@{/todos}" class="btn btn-primary">ToDo一覧に戻る</a></p>
+    <p><a th:href="@{/todos}" class="btn btn-primary" th:text="#{todo.return}">ToDo一覧に戻る</a></p>
 </main>
 </body>
 </html>

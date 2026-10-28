@@ -1,5 +1,8 @@
 package com.example.todoapp.exception;
 
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -21,9 +24,16 @@ import com.example.todoapp.api.RestExceptionHandler;
 @Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
+    private final MessageSource messages;
+
+    private String message(String key, Object... args) {
+        return messages.getMessage(key, args, LocaleContextHolder.getLocale());
+    }
+
     private final RestExceptionHandler restHandler;
 
-    public GlobalExceptionHandler(RestExceptionHandler restHandler) {
+    public GlobalExceptionHandler(RestExceptionHandler restHandler, MessageSource messages) {
+        this.messages = messages;
         this.restHandler = restHandler;
     }
 
@@ -33,7 +43,7 @@ public class GlobalExceptionHandler {
         log.warn("添付ファイルのサイズ超過: path={}", request.getRequestURI());
         response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE.value());
         model.addAttribute("errorCode", "ATTACHMENT_TOO_LARGE");
-        model.addAttribute("errorMessage", "ファイルは1つずつ、10MB以下で添付してください。");
+        model.addAttribute("errorMessage", message("error.uploadTooLarge"));
         return "error/business";
     }
 
@@ -42,7 +52,7 @@ public class GlobalExceptionHandler {
             HttpServletRequest request, HttpServletResponse response) {
         log.warn("ToDoが見つかりません: path={}, todoId={}", request.getRequestURI(), exception.getTodoId());
         response.setStatus(HttpStatus.NOT_FOUND.value());
-        model.addAttribute("errorMessage", "指定されたToDoが見つかりません。削除された可能性があります。");
+        model.addAttribute("errorMessage", message("error.todoNotFound"));
         model.addAttribute("todoId", exception.getTodoId());
         return "error/404";
     }
@@ -53,7 +63,8 @@ public class GlobalExceptionHandler {
         log.warn("業務エラー: path={}, code={}", request.getRequestURI(), exception.getErrorCode());
         response.setStatus(HttpStatus.BAD_REQUEST.value());
         model.addAttribute("errorCode", exception.getErrorCode());
-        model.addAttribute("errorMessage", exception.getMessage());
+        model.addAttribute("errorMessage", messages.getMessage("business." + exception.getErrorCode(), null,
+                exception.getMessage(), LocaleContextHolder.getLocale()));
         return "error/business";
     }
 
@@ -84,20 +95,20 @@ public class GlobalExceptionHandler {
         }
         if (status >= 500) {
             log.error("システムエラー: path={}", request.getRequestURI(), exception);
-            model.addAttribute("errorMessage", "システムエラーが発生しました。時間をおいて再度お試しください。");
+            model.addAttribute("errorMessage", message("error.system"));
             return new ModelAndView("error/500", model.asMap());
         }
         log.warn("リクエストエラー: path={}, status={}, type={}",
                 request.getRequestURI(), status, exception.getClass().getSimpleName());
         if (status == 404) {
-            model.addAttribute("errorMessage", "指定されたページまたはデータが見つかりません。");
+            model.addAttribute("errorMessage", message("error.pageNotFound"));
             return new ModelAndView("error/404", model.asMap());
         }
         if (status == 403) {
             return new ModelAndView("error/403", model.asMap());
         }
         model.addAttribute("errorCode", "HTTP_" + status);
-        model.addAttribute("errorMessage", "リクエストを処理できませんでした。入力内容や操作手順を確認してください。");
+        model.addAttribute("errorMessage", message("error.request"));
         return new ModelAndView("error/business", model.asMap());
     }
 

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>カレンダー</title>
+    <title th:text="#{calendar.title}">カレンダー</title>
     <link rel="stylesheet" href="/css/style.css" th:href="@{/css/style.css}">
     <style>
         .calendar-table td.saturday {
@@ -32,43 +32,44 @@
 
 <body>
     <div class="container">
+        <nav th:replace="~{fragments/language :: language}"></nav>
         <nav th:replace="~{fragments/account :: account}"></nav>
-        <p id="holidays-unavailable" role="status" hidden>祝日を取れませんでした</p>
-        <p id="weather-unavailable" role="status" hidden>天気を取得できませんでした</p>
-        <h1 class="page-title" th:if="${!weekView}" th:text="|${displayMonth.year}年${displayMonth.monthValue}月|">カレンダー</h1>
+        <p id="holidays-unavailable" role="status" hidden th:text="#{calendar.holidaysUnavailable}">祝日を取れませんでした</p>
+        <p id="weather-unavailable" role="status" hidden th:text="#{calendar.weatherUnavailable}">天気を取得できませんでした</p>
+        <h1 class="page-title" th:if="${!weekView}" th:text="#{calendar.monthHeading(${displayMonth.year.toString()},${displayMonth.monthValue.toString()})}">カレンダー</h1>
         <h1 class="page-title" th:if="${weekView}"
-            th:text="|${#temporals.format(firstDate, 'yyyy年M月d日')}〜${#temporals.format(lastDate, 'yyyy年M月d日')}|">週間カレンダー</h1>
-        <nav class="calendar-nav" aria-label="カレンダーの操作">
+            th:text="#{calendar.range(${#temporals.format(firstDate, #messages.msg('calendar.datePattern'))},${#temporals.format(lastDate, #messages.msg('calendar.datePattern'))})}">週間カレンダー</h1>
+        <nav class="calendar-nav" th:attr="aria-label=#{calendar.navigation}">
             <div class="calendar-nav-group" th:if="${!weekView}">
-                <a class="link" th:href="@{/calendar(year=${previousMonth.year},month=${previousMonth.monthValue})}">前の月</a>
-                <a class="link" th:href="@{/calendar(year=${nextMonth.year},month=${nextMonth.monthValue})}">次の月</a>
+                <a class="link" th:href="@{/calendar(year=${previousMonth.year},month=${previousMonth.monthValue})}" th:text="#{calendar.previousMonth}">前の月</a>
+                <a class="link" th:href="@{/calendar(year=${nextMonth.year},month=${nextMonth.monthValue})}" th:text="#{calendar.nextMonth}">次の月</a>
             </div>
             <div class="calendar-nav-group" th:if="${weekView}">
-                <a class="link" th:href="@{/calendar(view=week,date=${previousWeek})}">前の週</a>
-                <a class="link" th:href="@{/calendar(view=week,date=${nextWeek})}">次の週</a>
+                <a class="link" th:href="@{/calendar(view=week,date=${previousWeek})}" th:text="#{calendar.previousWeek}">前の週</a>
+                <a class="link" th:href="@{/calendar(view=week,date=${nextWeek})}" th:text="#{calendar.nextWeek}">次の週</a>
             </div>
-            <div class="calendar-nav-group" aria-label="表示の切り替え">
+            <div class="calendar-nav-group" th:attr="aria-label=#{calendar.switch}">
                 <a class="link" th:href="@{/calendar(year=${displayMonth.year},month=${displayMonth.monthValue},date=${referenceDate})}"
-                    th:attr="aria-current=${!weekView ? 'page' : null}">月で見る</a>
+                    th:attr="aria-current=${!weekView ? 'page' : null}" th:text="#{calendar.monthView}">月で見る</a>
                 <a class="link" th:href="@{/calendar(view=week,date=${referenceDate})}"
-                    th:attr="aria-current=${weekView ? 'page' : null}">週で見る</a>
+                    th:attr="aria-current=${weekView ? 'page' : null}" th:text="#{calendar.weekView}">週で見る</a>
             </div>
             <div class="calendar-nav-group">
-                <a class="link" th:href="@{/todos}">表で見る</a>
-                <a class="btn" th:href="@{/todos/new}">新規登録</a>
+                <a class="link" th:href="@{/todos}" th:text="#{calendar.tableView}">表で見る</a>
+                <a class="btn" th:href="@{/todos/new}" th:text="#{todo.new}">新規登録</a>
             </div>
         </nav>
         <table class="calendar-table" th:classappend="${weekView ? 'calendar-week' : ''}"
-            th:attr="data-from=${firstDate},data-to=${lastDate},data-view=${weekView ? 'week' : 'month'},aria-label=${weekView ? '週間カレンダー' : '月間カレンダー'}">
+            th:attr="data-from=${firstDate},data-to=${lastDate},data-view=${weekView ? 'week' : 'month'},aria-label=${weekView ? #messages.msg('calendar.week') : #messages.msg('calendar.month')}">
             <thead>
                 <tr>
-                    <th scope="col">日</th>
-                    <th scope="col">月</th>
-                    <th scope="col">火</th>
-                    <th scope="col">水</th>
-                    <th scope="col">木</th>
-                    <th scope="col">金</th>
-                    <th scope="col">土</th>
+                    <th scope="col" th:text="#{weekday.sun}">日</th>
+                    <th scope="col" th:text="#{weekday.mon}">月</th>
+                    <th scope="col" th:text="#{weekday.tue}">火</th>
+                    <th scope="col" th:text="#{weekday.wed}">水</th>
+                    <th scope="col" th:text="#{weekday.thu}">木</th>
+                    <th scope="col" th:text="#{weekday.fri}">金</th>
+                    <th scope="col" th:text="#{weekday.sat}">土</th>
                 </tr>
             </thead>
             <tbody>
@@ -80,12 +81,31 @@
             </tbody>
         </table>
         <p class="weather-source">
-            東京周辺の天気（今日を含む7日間）。出典：
+            <span th:text="#{calendar.weatherSource}">東京周辺の天気（今日を含む7日間）。出典：</span>
             <a class="link" href="https://open-meteo.com/">Open-Meteo</a>
-            （<a class="link" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>、天気コードを日本語に分類）
+            （<a class="link" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a><span th:text="#{calendar.weatherLicense}">、天気コードを日本語に分類）</span>
         </p>
     </div>
-    <script>
+    <script th:inline="javascript">
+        const moreMessage = /*[[#{calendar.more('COUNT_VALUE')}]]*/ 'COUNT_VALUE more';
+        const weatherNames = {
+            clear: /*[[#{weather.clear}]]*/ 'Clear',
+            cloudy: /*[[#{weather.cloudy}]]*/ 'Cloudy',
+            fog: /*[[#{weather.fog}]]*/ 'Fog',
+            rain: /*[[#{weather.rain}]]*/ 'Rain',
+            snow: /*[[#{weather.snow}]]*/ 'Snow',
+            thunder: /*[[#{weather.thunder}]]*/ 'Thunderstorms',
+            unknown: /*[[#{weather.unknown}]]*/ 'Unknown'
+        };
+        function weatherName(code) {
+            if ([0, 1].includes(code)) return weatherNames.clear;
+            if ([2, 3].includes(code)) return weatherNames.cloudy;
+            if ([45, 48].includes(code)) return weatherNames.fog;
+            if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return weatherNames.rain;
+            if ([71, 73, 75, 77, 85, 86].includes(code)) return weatherNames.snow;
+            if ([95, 96, 97, 99].includes(code)) return weatherNames.thunder;
+            return weatherNames.unknown;
+        }
         const table = document.querySelector('table[data-from]');
         const from = table.dataset.from;
         const to = table.dataset.to;
@@ -122,7 +142,7 @@
                     if (!weekView && dailyTodos.length > 3) {
                         const more = document.createElement('div');
                         more.classList.add('todo-more');
-                        more.textContent = `ほか ${dailyTodos.length - 3}件`;
+                        more.textContent = moreMessage.replace('COUNT_VALUE', dailyTodos.length - 3);
                         cell.appendChild(more);
                     }
                 }
@@ -187,7 +207,7 @@
                     }
                     const weather = document.createElement('span');
                     weather.classList.add('calendar-weather');
-                    weather.textContent = day.weatherName;
+                    weather.textContent = weatherName(day.weatherCode);
                     cell.querySelector('span').after(weather);
                 }
             } catch (error) {

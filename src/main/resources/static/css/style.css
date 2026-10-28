@@ -307,3 +307,16 @@ body {
 .attachment-table td:first-child {
     overflow-wrap: anywhere;
 }
+.language-switcher {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.language-switcher a[aria-current="true"] {
+    font-weight: bold;
+    text-decoration: underline;
+}

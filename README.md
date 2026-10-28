@@ -2,6 +2,21 @@
 
 Spring Boot / Thymeleaf / MyBatis / MySQLで動くToDoアプリです。
 
+## 多言語対応（日本語・英語）
+
+各画面の「日本語」「English」リンクで表示言語を切り替えられます。
+URLに `?lang=ja` または `?lang=en` を付けても切り替えられます（例：`/todos?lang=en`）。
+既定の表示は日本語です。選択した言語は `SessionLocaleResolver` でセッションに保持し、画面遷移・ログイン後も引き継ぎます。ログアウトやセッション終了後は日本語に戻ります。
+
+`WebConfig.java` にロケール設定と `LocaleChangeInterceptor` を配置しています。
+`src/main/resources/messages.properties` は日本語のフォールバック、`messages_ja.properties` と `messages_en.properties` は各言語の画面文言・操作結果・入力エラーです。UTF-8で管理し、メッセージキャッシュは3600秒です。画面はThymeleafの `#{key}`、コントローラーは `MessageSource`、Jakarta Validationは `{validation.*}` で参照します。Spring Boot 4の既存構成を維持しています。
+
+一覧・登録・確認・編集・削除・カレンダー・添付・認証・ユーザー管理・エラー画面を対応しています。
+言語切り替え時は検索条件・ページ・カレンダーの表示期間を維持します。ToDo入力・確認画面では保存処理を実行せず、入力値をPOSTで引き継いで再表示します。
+ジャンルはDBの既存の日本語値を保持して表示ラベルだけを翻訳します。利用者が入力したタイトル・メモ・ファイル名、および外部API由来の祝日名は元の内容を表示します。REST APIのフィールド名・ジャンル値・CSVの形式は従来どおりです。
+
+`InternationalizationTests` で既定言語、セッション保持、未対応言語、各画面の英語表示、入力検証、登録結果、翻訳キーの整合性を検証します。
+
 ## ログイン機能の使い方
 
 1. MySQLを起動し、通常どおりアプリを起動してください。Docker構成の場合は `docker compose up -d --build` で変更を反映できます。
@@ -205,6 +220,26 @@ Windowsでは `mvnw.cmd` がプロジェクト指定のMaven 3.10.0を取得・�
 ```
 
 認証・所有者管理・移行・起動テストはテスト専用のH2を使用します。既存のMySQL統合テストは `COMPLETION_TEST_DB_PASSWORD` が設定された場合だけ実行されます。
+
+### 教材「単体テスト」に対応するテスト
+
+教材の例を、既存のSpring Boot 4 / Java 21、Long型ID、`/todos`、`detail`、認証・所有者管理の仕様に合わせています。テスト依存関係は既存のJUnit Jupiter・Mockito・MyBatis Starter Testを利用します。
+
+| ファイル | 検証内容 |
+| --- | --- |
+| `TodoServiceTest.java` | `@ExtendWith(MockitoExtension.class)`、`@Mock`、`@InjectMocks`を使った単体テスト。検索・作成・取得・更新・論理削除・一括削除・復元・印切替、認証と所有者確認、監査・履歴の呼び出しを検証。SpringやDBは起動しません。 |
+| `TodoControllerIntegrationTest.java` | `@SpringBootTest`とMockMvcで一覧・作成・確認・編集・削除、入力エラー・404・CSRFを検証。実際のService・Mapperと専用H2を使用します。 |
+| `TodoMapperTest.java` | `@MybatisTest`で本番のMapper XMLとテーブル定義を読み込み、専用H2でCRUD・検索条件・並び順・ページ送り・所有者条件を検証。 |
+
+DBを使用する追加テストは`@Transactional`で各テスト後にロールバックします。Controllerテストの監査記録は既存の`REQUIRES_NEW`によって独立して確定するため、テストのトランザクション終了後に、そのテストユーザーの監査記録だけを削除します。
+
+既存画面では`POST /todos/confirm`で入力を検証するため、空タイトルのテストもこのURLで行います。教材の詳細画面に相当する確認は、既存の`GET /todos/{id}/edit`を使用します。
+
+追加した3クラスだけを実行する場合：
+
+```powershell
+.\mvnw.cmd "-Dtest=TodoServiceTest,TodoControllerIntegrationTest,TodoMapperTest" test
+```
 
 ### WindowsでのMaven Wrapper起動エラー
 

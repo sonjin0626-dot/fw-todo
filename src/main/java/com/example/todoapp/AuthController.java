@@ -1,5 +1,8 @@
 package com.example.todoapp;
 
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+
 import jakarta.validation.Valid;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -12,10 +15,17 @@ import org.springframework.web.bind.annotation.PostMapping;
 
 @Controller
 public class AuthController {
+    private final MessageSource messages;
+
+    private String message(String key, Object... args) {
+        return messages.getMessage(key, args, LocaleContextHolder.getLocale());
+    }
+
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
-    public AuthController(UserMapper userMapper, PasswordEncoder passwordEncoder) {
+    public AuthController(UserMapper userMapper, PasswordEncoder passwordEncoder, MessageSource messages) {
+        this.messages = messages;
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
     }
@@ -44,7 +54,7 @@ public class AuthController {
         try {
             userMapper.insert(user);
         } catch (DuplicateKeyException exception) {
-            bindingResult.rejectValue("username", "duplicate", "このユーザー名はすでに使われています");
+            bindingResult.rejectValue("username", "validation.duplicate", message("validation.duplicate"));
             return "register";
         }
         return "redirect:/login?registered=true";

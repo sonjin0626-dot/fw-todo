@@ -1,5 +1,8 @@
 package com.example.todoapp;
 
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
@@ -22,10 +25,17 @@ import com.example.todoapp.exception.TodoNotFoundException;
 
 @Controller
 public class TodoAttachmentController {
+    private final MessageSource messages;
+
+    private String message(String key, Object... args) {
+        return messages.getMessage(key, args, LocaleContextHolder.getLocale());
+    }
+
     private final TodoService todos;
     private final FileStorageService files;
 
-    public TodoAttachmentController(TodoService todos, FileStorageService files) {
+    public TodoAttachmentController(TodoService todos, FileStorageService files, MessageSource messages) {
+        this.messages = messages;
         this.todos = todos;
         this.files = files;
     }
@@ -44,9 +54,10 @@ public class TodoAttachmentController {
             RedirectAttributes redirect) throws IOException {
         try {
             files.store(id, file);
-            redirect.addFlashAttribute("message", "ファイルを添付しました");
+            redirect.addFlashAttribute("message", message("flash.attached"));
         } catch (BusinessException exception) {
-            redirect.addFlashAttribute("error", exception.getMessage());
+            redirect.addFlashAttribute("error", messages.getMessage("business." + exception.getErrorCode(), null,
+                    exception.getMessage(), LocaleContextHolder.getLocale()));
         }
         return "redirect:/todos/" + id + "/attach";
     }
@@ -68,7 +79,7 @@ public class TodoAttachmentController {
     @PostMapping("/todos/attachments/{attachmentId}/delete")
     public String delete(@PathVariable("attachmentId") Long id, RedirectAttributes redirect) {
         Long todoId = files.delete(id);
-        redirect.addFlashAttribute("message", "添付ファイルを削除しました");
+        redirect.addFlashAttribute("message", message("flash.attachmentDeleted"));
         return "redirect:/todos/" + todoId + "/attach";
     }
 }

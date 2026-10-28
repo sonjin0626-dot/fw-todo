@@ -1,5 +1,8 @@
 package com.example.todoapp;
 
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.dao.DuplicateKeyException;
@@ -15,8 +18,18 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 @RequestMapping("/admin/users")
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
+    private final MessageSource messages;
+
+    private String message(String key, Object... args) {
+        return messages.getMessage(key, args, LocaleContextHolder.getLocale());
+    }
+
     private final AdminUserService users;
-    public AdminUserController(AdminUserService users) { this.users = users; }
+
+    public AdminUserController(AdminUserService users, MessageSource messages) {
+        this.messages = messages;
+        this.users = users;
+    }
 
     @GetMapping
     public String list(Model model) {
@@ -63,7 +76,7 @@ public class AdminUserController {
         try {
             users.updateByAdmin(id, form);
         } catch (DuplicateKeyException exception) {
-            result.rejectValue("username", "duplicate", "このユーザー名はすでに使われています");
+            result.rejectValue("username", "validation.duplicate", message("validation.duplicate"));
             form.setNewPassword(null);
             return "admin/user-edit";
         }
@@ -74,14 +87,14 @@ public class AdminUserController {
             if (request.getSession(false) != null) request.getSession(false).invalidate();
             return "redirect:/login?accountUpdated=true";
         }
-        redirect.addFlashAttribute("message", "ユーザー情報を更新しました");
+        redirect.addFlashAttribute("message", message("flash.userUpdated"));
         return "redirect:/admin/users";
     }
 
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable Long id, RedirectAttributes redirect) {
         users.deleteUser(id);
-        redirect.addFlashAttribute("message", "ユーザーと関連するToDoを削除しました");
+        redirect.addFlashAttribute("message", message("flash.userDeleted"));
         return "redirect:/admin/users";
     }
 }

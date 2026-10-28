@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +8,10 @@
 </head>
 <body>
     <div class="container">
+        <nav th:replace="~{fragments/language :: language}"></nav>
         <nav th:replace="~{fragments/account :: account}"></nav>
-        <h1 class="page-title" th:text="${title}">見出し</h1>
-        <p>ここでは、やることを管理します。</p>
+        <h1 class="page-title" th:text="#{app.title}">見出し</h1>
+        <p th:text="#{app.intro}">ここでは、やることを管理します。</p>
     </div>
 </body>
 </html>
