@@ -1,17 +1,44 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.example.todoapp.TodoMapper">
+    <sql id="keywordCategoryFilters">
+        <if test="keyword != null and keyword != ''">
+            AND title LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        <if test="category != null and category != ''">
+            AND category = #{category}
+        </if>
+    </sql>
+    <sql id="searchFilters">
+        <if test="userId != null">AND user_id = #{userId}</if>
+        AND deleted_at IS NULL
+        <if test="!includeCompleted">
+            AND completed = false
+        </if>
+        <include refid="keywordCategoryFilters"/>
+    </sql>
+    <sql id="trashFilters">
+        <if test="userId != null">AND user_id = #{userId}</if>
+        AND deleted_at IS NOT NULL
+        <include refid="keywordCategoryFilters"/>
+    </sql>
+    <sql id="listOrder">
+        ORDER BY pinned DESC, due_date
+        <choose>
+            <when test="order == 'desc'">DESC</when>
+            <otherwise>ASC</otherwise>
+        </choose>, id ASC
+    </sql>
+    <sql id="pageOrder">
+        <include refid="listOrder"/>
+        LIMIT #{limit} OFFSET #{offset}
+    </sql>
     <select id="search" resultType="com.example.todoapp.Todo">
-        SELECT id, title, detail, category, priority,
-               due_date, completed, created_at, updated_at
+        SELECT id, user_id, title, detail, category, priority,
+               due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at
         FROM todos
         <where>
-            <if test="keyword != null and keyword != ''">
-                AND title LIKE CONCAT('%', #{keyword}, '%')
-            </if>
-            <if test="category != null and category != ''">
-                AND category = #{category}
-            </if>
+            <include refid="searchFilters"/>
             <if test="from != null">
                 AND due_date &gt;= #{from}
             </if>
@@ -25,15 +52,57 @@
             <otherwise>ASC</otherwise>
         </choose>
     </select>
-    <select id="findById" resultType="com.example.todoapp.Todo">
-        SELECT id, title, detail, category, priority,
-               due_date, completed, created_at, updated_at
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM todos
+        <where>
+            <include refid="searchFilters"/>
+        </where>
+    </select>
+    <select id="searchPage" resultType="com.example.todoapp.Todo">
+        SELECT id, user_id, title, detail, category, priority,
+               due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at
         FROM todos
-        WHERE id = #{id}
+        <where>
+            <include refid="searchFilters"/>
+        </where>
+        <include refid="pageOrder"/>
+    </select>
+    <select id="findById" resultType="com.example.todoapp.Todo">
+        SELECT id, user_id, title, detail, category, priority,
+               due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at
+        FROM todos
+        WHERE id = #{id} AND deleted_at IS NULL
+    </select>
+    <select id="findIncludingDeletedById" resultType="com.example.todoapp.Todo">
+        SELECT id, user_id FROM todos WHERE id = #{id}
+    </select>
+    <select id="searchForExport" resultType="com.example.todoapp.Todo">
+        SELECT id, user_id, title, detail, category, priority,
+               due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at
+        FROM todos
+        <where>
+            <include refid="searchFilters"/>
+        </where>
+        <include refid="listOrder"/>
+    </select>
+    <select id="countTrash" resultType="long">
+        SELECT COUNT(*) FROM todos
+        <where>
+            <include refid="trashFilters"/>
+        </where>
+    </select>
+    <select id="searchTrashPage" resultType="com.example.todoapp.Todo">
+        SELECT id, user_id, title, detail, category, priority,
+               due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at
+        FROM todos
+        <where>
+            <include refid="trashFilters"/>
+        </where>
+        <include refid="pageOrder"/>
     </select>
     <insert id="insert" parameterType="com.example.todoapp.Todo" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO todos (title, detail, category, priority, due_date, completed)
-        VALUES (#{title}, #{detail}, #{category}, #{priority}, #{dueDate}, COALESCE(#{completed}, false))
+        INSERT INTO todos (user_id, title, detail, category, priority, due_date, completed)
+        VALUES (#{userId}, #{title}, #{detail}, #{category}, #{priority}, #{dueDate}, COALESCE(#{completed}, false))
     </insert>
     <update id="update" parameterType="com.example.todoapp.Todo">
         UPDATE todos
@@ -42,11 +111,41 @@
             category = #{category},
             priority = #{priority},
             due_date = #{dueDate},
-            completed = #{completed}
-        WHERE id = #{id}
+            completed_at = CASE
+                WHEN #{completed} = false THEN NULL
+                WHEN completed = false AND #{completed} = true THEN CURRENT_TIMESTAMP
+                ELSE completed_at
+            END,
+            completed = COALESCE(#{completed}, completed)
+        WHERE id = #{id} <if test="userId != null">AND user_id = #{userId}</if> AND deleted_at IS NULL
     </update>
-    <delete id="deleteById">
-        DELETE FROM todos
-        WHERE id = #{id}
+    <update id="deleteById">
+        UPDATE todos SET deleted_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} <if test="userId != null">AND user_id = #{userId}</if> AND deleted_at IS NULL
+    </update>
+    <update id="bulkDeleteByIds">
+        UPDATE todos SET deleted_at = CURRENT_TIMESTAMP
+        WHERE deleted_at IS NULL
+        <if test="userId != null">AND user_id = #{userId}</if>
+        <choose>
+            <when test="ids != null and !ids.isEmpty()">
+                AND id IN
+                <foreach collection="ids" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+            </when>
+            <otherwise>AND 1 = 0</otherwise>
+        </choose>
+    </update>
+    <update id="restoreById">
+        UPDATE todos SET deleted_at = NULL
+        WHERE id = #{id} <if test="userId != null">AND user_id = #{userId}</if> AND deleted_at IS NOT NULL
+    </update>
+    <update id="togglePinned">
+        UPDATE todos SET pinned = NOT pinned
+        WHERE id = #{id} <if test="userId != null">AND user_id = #{userId}</if> AND deleted_at IS NULL
+    </update>
+    <delete id="deleteByUserId">
+        DELETE FROM todos WHERE user_id = #{userId}
     </delete>
 </mapper>

@@ -32,19 +32,34 @@
 
 <body>
     <div class="container">
+        <nav th:replace="~{fragments/account :: account}"></nav>
         <p id="holidays-unavailable" role="status" hidden>祝日を取れませんでした</p>
-        <h1 class="page-title" th:text="|${displayMonth.year}年${displayMonth.monthValue}月|">カレンダー</h1>
+        <p id="weather-unavailable" role="status" hidden>天気を取得できませんでした</p>
+        <h1 class="page-title" th:if="${!weekView}" th:text="|${displayMonth.year}年${displayMonth.monthValue}月|">カレンダー</h1>
+        <h1 class="page-title" th:if="${weekView}"
+            th:text="|${#temporals.format(firstDate, 'yyyy年M月d日')}〜${#temporals.format(lastDate, 'yyyy年M月d日')}|">週間カレンダー</h1>
         <nav class="calendar-nav" aria-label="カレンダーの操作">
-            <div class="calendar-nav-group">
+            <div class="calendar-nav-group" th:if="${!weekView}">
                 <a class="link" th:href="@{/calendar(year=${previousMonth.year},month=${previousMonth.monthValue})}">前の月</a>
                 <a class="link" th:href="@{/calendar(year=${nextMonth.year},month=${nextMonth.monthValue})}">次の月</a>
+            </div>
+            <div class="calendar-nav-group" th:if="${weekView}">
+                <a class="link" th:href="@{/calendar(view=week,date=${previousWeek})}">前の週</a>
+                <a class="link" th:href="@{/calendar(view=week,date=${nextWeek})}">次の週</a>
+            </div>
+            <div class="calendar-nav-group" aria-label="表示の切り替え">
+                <a class="link" th:href="@{/calendar(year=${displayMonth.year},month=${displayMonth.monthValue},date=${referenceDate})}"
+                    th:attr="aria-current=${!weekView ? 'page' : null}">月で見る</a>
+                <a class="link" th:href="@{/calendar(view=week,date=${referenceDate})}"
+                    th:attr="aria-current=${weekView ? 'page' : null}">週で見る</a>
             </div>
             <div class="calendar-nav-group">
                 <a class="link" th:href="@{/todos}">表で見る</a>
                 <a class="btn" th:href="@{/todos/new}">新規登録</a>
             </div>
         </nav>
-        <table class="calendar-table" aria-label="月間カレンダー" th:attr="data-from=${firstDate},data-to=${lastDate}">
+        <table class="calendar-table" th:classappend="${weekView ? 'calendar-week' : ''}"
+            th:attr="data-from=${firstDate},data-to=${lastDate},data-view=${weekView ? 'week' : 'month'},aria-label=${weekView ? '週間カレンダー' : '月間カレンダー'}">
             <thead>
                 <tr>
                     <th scope="col">日</th>
@@ -59,16 +74,22 @@
             <tbody>
                 <tr th:each="week : ${weeks}">
                     <td th:each="date : ${week}" th:attr="data-date=${date}">
-                        <span th:if="${date != null}" th:text="${date.dayOfMonth}"></span>
+                        <span th:if="${date != null}" th:text="${weekView ? #temporals.format(date, 'M/d') : date.dayOfMonth}"></span>
                     </td>
                 </tr>
             </tbody>
         </table>
+        <p class="weather-source">
+            東京周辺の天気（今日を含む7日間）。出典：
+            <a class="link" href="https://open-meteo.com/">Open-Meteo</a>
+            （<a class="link" href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>、天気コードを日本語に分類）
+        </p>
     </div>
     <script>
         const table = document.querySelector('table[data-from]');
         const from = table.dataset.from;
         const to = table.dataset.to;
+        const weekView = table.dataset.view === 'week';
 
         async function loadTodos() {
             try {
@@ -79,20 +100,26 @@
                 const todos = await res.json();
                 const now = new Date();
                 const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const nearDate = new Date(now);
+                nearDate.setDate(nearDate.getDate() + 3);
+                const nearDeadline = `${nearDate.getFullYear()}-${String(nearDate.getMonth() + 1).padStart(2, '0')}-${String(nearDate.getDate()).padStart(2, '0')}`;
 
                 for (const cell of table.querySelectorAll('td[data-date]')) {
                     const dailyTodos = todos.filter(todo => todo.dueDate === cell.dataset.date);
-                    for (const todo of dailyTodos.slice(0, 3)) {
+                    const visibleTodos = weekView ? dailyTodos : dailyTodos.slice(0, 3);
+                    for (const todo of visibleTodos) {
                         const name = document.createElement('a');
                         name.classList.add('todo-name');
                         name.href = `/todos/${todo.id}/edit`;
                         name.textContent = todo.title;
                         if (todo.dueDate < today && todo.completed !== true) {
                             name.classList.add('overdue');
+                        } else if (todo.dueDate >= today && todo.dueDate <= nearDeadline && todo.completed !== true) {
+                            name.classList.add('near-deadline');
                         }
                         cell.appendChild(name);
                     }
-                    if (dailyTodos.length > 3) {
+                    if (!weekView && dailyTodos.length > 3) {
                         const more = document.createElement('div');
                         more.classList.add('todo-more');
                         more.textContent = `ほか ${dailyTodos.length - 3}件`;
@@ -140,8 +167,38 @@
             }
         }
 
+        async function loadWeather() {
+            const unavailable = document.getElementById('weather-unavailable');
+            try {
+                const res = await fetch('/api/weather');
+                if (!res.ok || res.headers.has('X-Weather-Unavailable')) {
+                    throw new Error('天気を取得できませんでした。');
+                }
+                const forecast = await res.json();
+                if (!Array.isArray(forecast)) {
+                    throw new Error('天気の形式が正しくありません。');
+                }
+                const cells = new Map(Array.from(table.querySelectorAll('td[data-date]'),
+                    cell => [cell.dataset.date, cell]));
+                for (const day of forecast) {
+                    const cell = cells.get(day.date);
+                    if (!cell || typeof day.weatherName !== 'string') {
+                        continue;
+                    }
+                    const weather = document.createElement('span');
+                    weather.classList.add('calendar-weather');
+                    weather.textContent = day.weatherName;
+                    cell.querySelector('span').after(weather);
+                }
+            } catch (error) {
+                unavailable.hidden = false;
+                console.error('天気の読み込みに失敗しました。', error);
+            }
+        }
+
         loadTodos();
         loadHolidays();
+        loadWeather();
     </script>
 </body>
 

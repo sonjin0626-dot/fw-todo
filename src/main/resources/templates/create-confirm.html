@@ -10,6 +10,7 @@
 
 <body>
     <div class="container">
+        <nav th:replace="~{fragments/account :: account}"></nav>
         <h1 class="page-title">登録の確認</h1>
         <form th:action="@{/todos}" th:object="${todo}" method="post">
             <p>やること</p>

@@ -6,6 +6,7 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -18,7 +19,13 @@ public class CalendarController {
 
     @GetMapping("/calendar")
     public String calendar(@RequestParam(name = "year", required = false) Integer year,
-            @RequestParam(name = "month", required = false) Integer month, Model model) {
+            @RequestParam(name = "month", required = false) Integer month,
+            @RequestParam(name = "view", defaultValue = "month") String view,
+            @RequestParam(name = "date", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date, Model model) {
+        if (!"month".equals(view) && !"week".equals(view)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "表示はmonthまたはweekを指定してください");
+        }
         YearMonth currentMonth = YearMonth.now();
         YearMonth displayMonth;
         YearMonth previousMonth;
@@ -26,6 +33,11 @@ public class CalendarController {
         try {
             displayMonth = YearMonth.of(year == null ? currentMonth.getYear() : year,
                     month == null ? currentMonth.getMonthValue() : month);
+            if ("week".equals(view)) {
+                LocalDate referenceDate = date != null ? date
+                        : (displayMonth.equals(currentMonth) ? LocalDate.now() : displayMonth.atDay(1));
+                return weeklyCalendar(referenceDate, model);
+            }
             previousMonth = displayMonth.minusMonths(1);
             nextMonth = displayMonth.plusMonths(1);
         } catch (DateTimeException exception) {
@@ -58,6 +70,29 @@ public class CalendarController {
         model.addAttribute("firstDate", firstDate);
         model.addAttribute("lastDate", lastDate);
         model.addAttribute("weeks", weeks);
+        model.addAttribute("weekView", false);
+        model.addAttribute("referenceDate",
+                date != null && YearMonth.from(date).equals(displayMonth) ? date
+                        : (displayMonth.equals(currentMonth) ? LocalDate.now() : firstDate));
+        return "calendar";
+    }
+
+    private String weeklyCalendar(LocalDate referenceDate, Model model) {
+        // 日曜なら0日、月曜なら1日、…、土曜なら6日戻す。
+        LocalDate firstDate = referenceDate.minusDays(referenceDate.getDayOfWeek().getValue() % 7);
+        LocalDate lastDate = firstDate.plusDays(6);
+        List<LocalDate> week = new ArrayList<>();
+        for (int day = 0; day < 7; day++) {
+            week.add(firstDate.plusDays(day));
+        }
+        model.addAttribute("weekView", true);
+        model.addAttribute("displayMonth", YearMonth.from(referenceDate));
+        model.addAttribute("firstDate", firstDate);
+        model.addAttribute("lastDate", lastDate);
+        model.addAttribute("previousWeek", firstDate.minusWeeks(1));
+        model.addAttribute("nextWeek", firstDate.plusWeeks(1));
+        model.addAttribute("referenceDate", referenceDate);
+        model.addAttribute("weeks", List.of(week));
         return "calendar";
     }
 }

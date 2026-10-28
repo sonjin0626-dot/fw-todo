@@ -1,13 +1,17 @@
 package com.example.todoapp.api;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -58,6 +62,61 @@ public class TodoApiController {
             return notFound(id);
         }
         return ResponseEntity.ok(TodoDto.from(todo));
+    }
+
+    @GetMapping(value = "/api/todos.csv", produces = "text/csv;charset=UTF-8")
+    public ResponseEntity<byte[]> exportCsv(
+            @RequestParam(name = "keyword", defaultValue = "") String keyword,
+            @RequestParam(name = "category", defaultValue = "") String category,
+            @RequestParam(name = "order", defaultValue = "asc") String order,
+            @RequestParam(name = "includeCompleted", defaultValue = "false") boolean includeCompleted) {
+        String sortOrder = "desc".equals(order) ? "desc" : "asc";
+        List<Todo> todos = todoService.searchForExport(keyword, category, sortOrder, includeCompleted);
+        StringBuilder csv = new StringBuilder("\uFEFF");
+        appendCsvRow(csv, "印", "やること", "ジャンル", "優先度", "期限", "状態", "メモ");
+        for (Todo todo : todos) {
+            String status = Boolean.TRUE.equals(todo.getCompleted()) ? "完了" : "未完了";
+            if (Boolean.TRUE.equals(todo.getCompleted()) && todo.getCompletedAt() != null) {
+                status += "（" + todo.getCompletedAt().format(DateTimeFormatter.ISO_LOCAL_DATE) + "）";
+            }
+            Integer priority = todo.getPriority();
+            appendCsvRow(csv,
+                    Boolean.TRUE.equals(todo.getPinned()) ? "あり" : "なし",
+                    todo.getTitle(), todo.getCategory(),
+                    Integer.valueOf(1).equals(priority) ? "高" : (Integer.valueOf(2).equals(priority) ? "中" : "低"),
+                    todo.getDueDate() == null ? "" : todo.getDueDate().toString(), status, todo.getDetail());
+        }
+        return ResponseEntity.ok()
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment().filename("todos.csv").build().toString())
+                .body(csv.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static void appendCsvRow(StringBuilder csv, String... values) {
+        for (int index = 0; index < values.length; index++) {
+            if (index > 0) {
+                csv.append(',');
+            }
+            String value = values[index] == null ? "" : values[index];
+            int start = 0;
+            while (start < value.length()) {
+                int codePoint = value.codePointAt(start);
+                if (!Character.isWhitespace(codePoint) && !Character.isSpaceChar(codePoint)
+                        && !Character.isISOControl(codePoint) && Character.getType(codePoint) != Character.FORMAT) {
+                    break;
+                }
+                start += Character.charCount(codePoint);
+            }
+            boolean formula = start < value.length() && "=+-@＝＋－＠".indexOf(value.charAt(start)) >= 0;
+            boolean leadingControl = !value.isEmpty() && "\t\r\n".indexOf(value.charAt(0)) >= 0;
+            if (formula || leadingControl) {
+                // The apostrophe marks text; the tab adds protection for Excel CSV handling.
+                value = "'\t" + value;
+            }
+            csv.append('"').append(value.replace("\"", "\"\"")).append('"');
+        }
+        csv.append("\r\n");
     }
 
     @PostMapping("/api/todos")

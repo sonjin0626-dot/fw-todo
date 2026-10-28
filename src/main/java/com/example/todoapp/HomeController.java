@@ -1,5 +1,11 @@
 package com.example.todoapp;
 
+import java.util.List;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -9,6 +15,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.validation.Valid;
 
@@ -21,6 +28,11 @@ public class HomeController {
         this.todoService = todoService;
     }
 
+    @ModelAttribute("username")
+    public String username(@AuthenticationPrincipal UserDetails userDetails) {
+        return userDetails == null ? null : userDetails.getUsername();
+    }
+
     @GetMapping("/")
     public String index(Model model) {
         model.addAttribute("title", "やること管理");
@@ -30,12 +42,26 @@ public class HomeController {
     @GetMapping("/todos")
     public String todos(@RequestParam(name = "keyword", defaultValue = "") String keyword,
             @RequestParam(name = "category", defaultValue = "") String category,
-            @RequestParam(name = "order", defaultValue = "asc") String order, Model model) {
+            @RequestParam(name = "order", defaultValue = "asc") String order,
+            @RequestParam(name = "includeCompleted", defaultValue = "false") boolean includeCompleted,
+            @RequestParam(name = "page", defaultValue = "1") int page,
+            @RequestParam(name = "trash", defaultValue = "0") String trash, Model model) {
+        boolean trashMode = "1".equals(trash);
         String sortOrder = "desc".equals(order) ? "desc" : "asc";
-        model.addAttribute("todos", todoService.search(keyword, category, sortOrder));
+        long totalCount = trashMode ? todoService.countTrash(keyword, category)
+                : todoService.count(keyword, category, includeCompleted);
+        int totalPages = (int) Math.max(1, (totalCount + TodoService.PAGE_SIZE - 1) / TodoService.PAGE_SIZE);
+        int currentPage = Math.max(1, Math.min(page, totalPages));
+        model.addAttribute("todos", trashMode ? todoService.searchTrashPage(keyword, category, sortOrder, currentPage)
+                : todoService.searchPage(keyword, category, sortOrder, includeCompleted, currentPage));
         model.addAttribute("keyword", keyword);
         model.addAttribute("category", category);
         model.addAttribute("order", sortOrder);
+        model.addAttribute("includeCompleted", trashMode || includeCompleted);
+        model.addAttribute("trashMode", trashMode);
+        model.addAttribute("page", currentPage);
+        model.addAttribute("totalPages", totalPages);
+        model.addAttribute("totalCount", totalCount);
         return "todos";
     }
 
@@ -80,6 +106,7 @@ public class HomeController {
     @PostMapping("/todos/{id}/confirm")
     public String editConfirm(@PathVariable("id") Long id, @Valid @ModelAttribute("todo") Todo todo,
             BindingResult bindingResult, Model model) {
+        todoService.checkAccess(id);
         model.addAttribute("id", id);
         if (bindingResult.hasErrors()) {
             return "edit";
@@ -89,6 +116,7 @@ public class HomeController {
 
     @PostMapping("/todos/{id}/edit")
     public String editRewrite(@PathVariable("id") Long id, @ModelAttribute("todo") Todo todo, Model model) {
+        todoService.checkAccess(id);
         model.addAttribute("id", id);
         return "edit";
     }
@@ -118,6 +146,54 @@ public class HomeController {
     public String delete(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
         todoService.delete(id);
         redirectAttributes.addFlashAttribute("message", "削除しました");
+        return "redirect:/todos";
+    }
+
+    @PostMapping("/todos/bulk-delete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String bulkDelete(@RequestParam(name = "ids", required = false) List<Long> ids,
+            @RequestParam(name = "keyword", defaultValue = "") String keyword,
+            @RequestParam(name = "category", defaultValue = "") String category,
+            @RequestParam(name = "order", defaultValue = "asc") String order,
+            @RequestParam(name = "includeCompleted", defaultValue = "false") boolean includeCompleted,
+            @RequestParam(name = "page", defaultValue = "1") int page, RedirectAttributes redirectAttributes) {
+        int deleted;
+        try {
+            deleted = todoService.bulkDelete(ids);
+        } catch (IllegalArgumentException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "削除する項目の番号が正しくありません", exception);
+        }
+        redirectAttributes.addFlashAttribute("message", ids == null || ids.isEmpty()
+                ? "削除する項目を選んでください" : deleted + "件を削除しました");
+        redirectAttributes.addAttribute("keyword", keyword);
+        redirectAttributes.addAttribute("category", category);
+        redirectAttributes.addAttribute("order", "desc".equals(order) ? "desc" : "asc");
+        redirectAttributes.addAttribute("includeCompleted", includeCompleted);
+        redirectAttributes.addAttribute("page", Math.max(1, page));
+        return "redirect:/todos";
+    }
+
+    @PostMapping("/todos/{id}/restore")
+    public String restore(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
+        boolean restored = todoService.restore(id);
+        redirectAttributes.addFlashAttribute("message", restored ? "戻しました" : "見つかりませんでした");
+        return "redirect:/todos?trash=1";
+    }
+
+    @PostMapping("/todos/{id}/pin")
+    public String togglePinned(@PathVariable("id") Long id,
+            @RequestParam(name = "keyword", defaultValue = "") String keyword,
+            @RequestParam(name = "category", defaultValue = "") String category,
+            @RequestParam(name = "order", defaultValue = "asc") String order,
+            @RequestParam(name = "includeCompleted", defaultValue = "false") boolean includeCompleted,
+            @RequestParam(name = "page", defaultValue = "1") int page, RedirectAttributes redirectAttributes) {
+        boolean toggled = todoService.togglePinned(id);
+        redirectAttributes.addFlashAttribute("message", toggled ? "印を切り替えました" : "見つかりませんでした");
+        redirectAttributes.addAttribute("keyword", keyword);
+        redirectAttributes.addAttribute("category", category);
+        redirectAttributes.addAttribute("order", "desc".equals(order) ? "desc" : "asc");
+        redirectAttributes.addAttribute("includeCompleted", includeCompleted);
+        redirectAttributes.addAttribute("page", Math.max(1, page));
         return "redirect:/todos";
     }
 }

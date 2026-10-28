@@ -2,8 +2,11 @@ package com.example.todoapp.mcp;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -169,6 +172,36 @@ public class TodoTools {
             freeDays.add(day);
         }
         return freeDays;
+    }
+
+    @McpTool(name = "summarize_week", description = "期限が指定期間内（開始日・終了日を含む）のやることを数えて要約し、件数・ジャンル別件数・期限切れ件数を返す。件数は完了済みも含む。期限切れは日本時間の今日より前が期限の未完了分。日付の省略側は制限せず、両方省略時は期限なしも含む全件を集計する")
+    public WeekSummary summarizeWeek(
+            @McpToolParam(required = false, description = "期間の開始日（yyyy-MM-dd、例：2026-04-06。省略時は下限なし）") String from,
+            @McpToolParam(required = false, description = "期間の終了日（yyyy-MM-dd、例：2026-04-12。省略時は上限なし）") String to) {
+        LocalDate fromDate = from == null ? null : LocalDate.parse(from);
+        LocalDate toDate = to == null ? null : LocalDate.parse(to);
+        if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+            throw new IllegalArgumentException("開始日は終了日以前にしてください");
+        }
+
+        List<Todo> todos = todoService.search(null, null, "asc", fromDate, toDate);
+        Map<String, Long> categoryCounts = new LinkedHashMap<>();
+        for (String category : List.of("デザイン", "マーケティング", "プログラミング", "資格", "就職活動")) {
+            categoryCounts.put(category, 0L);
+        }
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Tokyo"));
+        long overdueCount = 0;
+        for (Todo todo : todos) {
+            categoryCounts.merge(todo.getCategory(), 1L, Long::sum);
+            if (!Boolean.TRUE.equals(todo.getCompleted()) && todo.getDueDate() != null
+                    && todo.getDueDate().isBefore(today)) {
+                overdueCount++;
+            }
+        }
+        return new WeekSummary(todos.size(), categoryCounts, overdueCount);
+    }
+
+    public record WeekSummary(long totalCount, Map<String, Long> categoryCounts, long overdueCount) {
     }
 
     private void validateTitle(String title) {

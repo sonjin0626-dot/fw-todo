@@ -140,7 +140,7 @@ class HolidayApiControllerTests {
 
     private void respondWith(ResponseCreator response) {
         holidayApi.reset();
-        holidayApi.expect(requestTo("https://holidays-jp.github.invalid/api/v1/date.json"))
+        holidayApi.expect(requestTo("https://holidays-jp.github.io/api/v1/date.json"))
                 .andRespond(response);
     }
 

@@ -14,6 +14,7 @@ import lombok.Data;
 public class Todo {
 
     private Long id;
+    private Long userId;
 
     @NotBlank(message = "やることを入力してください")
     @Size(max = 255, message = "やることは255文字以内で入力してください")
@@ -32,9 +33,22 @@ public class Todo {
     private LocalDate dueDate;
 
     private Boolean completed;
+    private LocalDateTime completedAt;
+    private LocalDateTime deletedAt;
+    private Boolean pinned;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
     public Todo() {
+    }
+
+    public boolean isOverdue() {
+        return !Boolean.TRUE.equals(completed) && dueDate != null && dueDate.isBefore(LocalDate.now());
+    }
+
+    public boolean isNearDeadline() {
+        LocalDate today = LocalDate.now();
+        return !Boolean.TRUE.equals(completed) && dueDate != null
+                && !dueDate.isBefore(today) && !dueDate.isAfter(today.plusDays(3));
     }
 }

@@ -8,6 +8,7 @@
 </head>
 <body>
     <div class="container">
+        <nav th:replace="~{fragments/account :: account}"></nav>
         <h1 class="page-title">削除確認</h1>
         <form th:action="@{/todos/{id}/delete(id=${id})}" method="post">
             <p>やること</p>

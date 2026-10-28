@@ -8,6 +8,7 @@
 </head>
 <body>
     <div class="container">
+        <nav th:replace="~{fragments/account :: account}"></nav>
         <h1 class="page-title" th:text="${title}">見出し</h1>
         <p>ここでは、やることを管理します。</p>
     </div>

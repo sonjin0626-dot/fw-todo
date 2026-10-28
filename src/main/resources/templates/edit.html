@@ -8,6 +8,7 @@
 </head>
 <body>
     <div class="container">
+        <nav th:replace="~{fragments/account :: account}"></nav>
         <h1 class="page-title">編集</h1>
         <form th:action="@{/todos/{id}/confirm(id=${id})}" th:object="${todo}" method="post">
             <div class="form-row">
