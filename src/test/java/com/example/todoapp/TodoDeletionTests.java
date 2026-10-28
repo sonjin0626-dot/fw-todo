@@ -64,7 +64,8 @@ class TodoDeletionTests {
             statement.execute("CREATE TEMPORARY TABLE todos LIKE deletion_template");
         }
         mapper = session.getMapper(TodoMapper.class);
-        service = new TodoService(mapper, TodoTestUsers.authenticatedMapper());
+        service = new TodoService(mapper, TodoTestUsers.authenticatedMapper(),
+                mock(HistoryMapper.class), mock(AuditService.class));
         api = new TodoApiController(service);
         HolidayClient holidays = mock(HolidayClient.class);
         when(holidays.fetchHolidays()).thenReturn(new HolidayClient.FetchResult(Map.of(), false));

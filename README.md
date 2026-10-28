@@ -118,6 +118,67 @@ APIの既存フィールド `type`、`title`、`status`、`detail`、`instance` 
 
 想定内の業務エラー・不正なリクエストはWARN、予期しない例外はERRORで記録します。祝日API・天気APIの取得失敗もWARNを出力します。追加の `ExceptionHandlingTests` と所有者管理の統合テストで、ステータス、HTML/JSONの切替、入力チェック、内部情報の非表示、例外ログ、権限制御を検証します。
 
+## AOPによるログ出力
+
+添付教材のログ出力を、既存のSpring Boot 4 / Java 21の構成に合わせて実装しています。Boot 4では教材の `spring-boot-starter-aop` が `spring-boot-starter-aspectj` に改名されているため、後者を `pom.xml` に追加しています（[公式移行ガイド](https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-4.0-Migration-Guide)）。
+
+| ファイル | 役割 |
+| --- | --- |
+| `aspect/LoggingAspect.java` | `@Before` でメソッド名・引数、`@AfterReturning` で戻り値、`@AfterThrowing` でエラーメッセージをSLF4Jで出力。開始・終了はINFO、例外はERROR。 |
+| `aspect/PerformanceAspect.java` | `@Around` と `System.nanoTime()` で経過時間を計測し、ミリ秒で出力。正常時はINFO、例外時はERROR。戻り値と例外を呼び出し元へそのまま返す。 |
+| `ServiceAspectIntegrationTests.java` | 実際のSpring BeanとH2で、ログの内容・順序・実行時間・例外の伝播・パスワードの非表示を確認。 |
+
+対象は `com.example.todoapp` 以下にある `@Service` クラスのpublicメソッドです。既存の `TodoService`、`AdminUserService`、`CustomUserDetailsService` に適用され、ControllerやMapperは対象に含みません。教材の `com.example.service.*` をそのまま使うと既存Serviceに一致しないため、次のPointcutを両Aspectで共有しています。
+
+```java
+@within(org.springframework.stereotype.Service) && execution(public * com.example.todoapp..*(..))
+```
+
+`@Order` によって開始 → 実行時間 → 正常終了（または例外）の順で記録します。例外時に正常終了のログは出しません。認証情報を含む `User`、`UserEditForm`、`UserDetails` はパスワードを `[PROTECTED]` に置き換え、ユーザー一覧の要素にも同じ処理を適用します。ToDoの引数・戻り値にはタイトルやメモが含まれます。既存の登録ID・削除件数などの操作ログも引き続き出力します。
+
+```text
+INFO  LoggingAspect - 【開始】TodoService.findById(..) 引数: [1]
+INFO  PerformanceAspect - TodoService.findById(..) 実行時間: 2ms
+INFO  LoggingAspect - 【終了】TodoService.findById(..) 戻り値: Todo(id=1, ...)
+```
+
+アプリ起動後に画面・REST API・MCPからToDoを操作すると、起動コンソールにログが出ます。必要に応じて `application.properties` の `logging.level.com.example.todoapp.aspect=OFF` で両Aspectのログを停止できます。
+
+Spring AOPはSpringから注入されたBeanへの呼び出しに作用します。同じクラス内でのメソッド呼び出しや、`new TodoService(...)` で直接生成したオブジェクトには適用されません。例えば `search` のオーバーロードが内部で別の `search` を呼ぶ場合、外側の呼び出しだけを記録します。
+
+## トランザクション管理
+
+添付教材のトランザクション管理を既存の `TodoService` に適用しています。Spring Boot 4 / Java 21 / MyBatisの構成を維持し、既存の画面・REST API・MCPから共通で利用します。追加の依存関係は不要です。
+
+| ファイル | 役割 |
+| --- | --- |
+| `TodoService.java` | クラスの既定値を `@Transactional(readOnly = true)` とし、検索・件数・詳細・アクセス確認を読み取り専用にする。登録・編集・削除・一括削除・復元・印の切替には `@Transactional(rollbackFor = Exception.class)` を指定。 |
+| `HistoryMapper.java` | `todo_history` に対象ToDo ID、操作したユーザーID、操作種別、日時を保存。ToDoと同じトランザクションに参加し、どちらかの保存に失敗したら両方をロールバックする。 |
+| `AuditService.java` / `AuditMapper.java` | `audit_logs` に操作の試行を記録。別Beanのpublicメソッドを経由した `REQUIRES_NEW` により、本体がロールバックしても監査ログは残る。 |
+| `TodoMapper.java` | 編集・削除の更新件数を返し、実際に行を更新した場合に履歴を保存する。 |
+| `db/transactions.sql` / `application.properties` / `initdb/01_create_table.sql` | 既存DB・新規DBに履歴・監査テーブルを追加する。 |
+| `TransactionManagementIntegrationTests.java` | 実際のSpring BeanとH2でコミット・ロールバック・独立監査・読み取り専用・認可を検証する。 |
+
+操作履歴の種別は `CREATE`、`UPDATE`、`DELETE`、`BULK_DELETE`、`RESTORE`、`TOGGLE_PIN` です。完了状態の変更は既存の編集処理を経由するため `UPDATE` として記録します。管理者が他人のToDoを操作した場合も、`actor_user_id` には操作した管理者のIDを保存します。復元や印の切替で更新対象がなかった場合は履歴を増やしません。一括削除では、重複ID・存在しないID・削除済みの行を履歴の対象から除外します。一括削除は全体を一つのトランザクションとして扱い、失敗を握りつぶして続行しません。
+
+監査ログの種別は各操作名に `_ATTEMPT` を付けた値です。認可・入力検査を通った操作について、DBの変更に先立って記録します。監査ログは成功を表すものではなく、本体の保存失敗や更新対象なしの場合にも残ります。作成前はIDが未発行なので、`CREATE_ATTEMPT` の `todo_id` はNULLです。監査ログ自体の保存に失敗した場合は例外を伝播し、本体の変更も確定しません。
+
+履歴・監査のID列には外部キーを設けていません。管理者によるユーザー・関連ToDoの物理削除後も記録を保持し、独立した監査トランザクションが未コミットの行を参照して待機することを防ぎます。タイトル・メモ・パスワードはこれらのテーブルに保存しません。
+
+`rollbackFor = Exception.class` によりチェック例外もロールバック対象です。既存の `BusinessException` は不正な操作を拒否するために使われているので、教材の警告用 `noRollbackFor = BusinessException.class` は適用していません。業務エラー時も変更を戻す動作を維持します。将来「警告が出ても変更を確定する」業務を追加する際は、その警告専用の例外型に限定して `noRollbackFor` を設定してください。
+
+通常の更新処理は既定の `REQUIRED` で、呼び出し元にトランザクションがあれば参加します。監査だけが独立して確定します（[Spring公式の伝播の説明](https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/tx-propagation.html)）。Springから注入されたBeanへの呼び出しで適用されるため、監査メソッドを `TodoService` 内へ移して直接呼ばないでください。読み取りメソッドのオーバーロードは、外側の読み取り専用トランザクション内で処理します。
+
+アプリを再起動すると `db/transactions.sql` が存在しないテーブルを自動作成します。既存データの削除やDBボリュームの作り直しは不要です。履歴の過去分は生成しません。確認には次のSQLを使えます。
+
+```sql
+SELECT id, todo_id, actor_user_id, action, created_at
+FROM todo_history ORDER BY id DESC LIMIT 50;
+
+SELECT id, todo_id, actor_user_id, action, created_at
+FROM audit_logs ORDER BY id DESC LIMIT 50;
+```
+
 ## テスト
 
 Windowsでは `mvnw.cmd` がプロジェクト指定のMaven 3.10.0を取得・起動します。動作確認は `.\mvnw.cmd -v`、テストは次のコマンドで実行できます。別途Mavenをインストールする必要はありません。

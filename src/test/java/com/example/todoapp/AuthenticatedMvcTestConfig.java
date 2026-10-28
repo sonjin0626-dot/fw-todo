@@ -10,6 +10,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 @TestConfiguration(proxyBeanMethods = false)
 public class AuthenticatedMvcTestConfig {
     @Bean
+    HistoryMapper testHistoryMapper() {
+        return org.mockito.Mockito.mock(HistoryMapper.class);
+    }
+
+    @Bean
+    AuditService testAuditService() {
+        return org.mockito.Mockito.mock(AuditService.class);
+    }
+
+    @Bean
     UserMapper testUserMapper() {
         return TodoTestUsers.mapper();
     }

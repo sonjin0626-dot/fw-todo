@@ -16,16 +16,22 @@ import com.example.todoapp.exception.TodoNotFoundException;
 
 @Slf4j
 @Service
+@Transactional(readOnly = true)
 public class TodoService {
 
     public static final int PAGE_SIZE = 10;
 
     private final TodoMapper todoMapper;
     private final UserMapper userMapper;
+    private final HistoryMapper historyMapper;
+    private final AuditService auditService;
 
-    public TodoService(TodoMapper todoMapper, UserMapper userMapper) {
+    public TodoService(TodoMapper todoMapper, UserMapper userMapper,
+            HistoryMapper historyMapper, AuditService auditService) {
         this.todoMapper = todoMapper;
         this.userMapper = userMapper;
+        this.historyMapper = historyMapper;
+        this.auditService = auditService;
     }
 
     public List<Todo> search(String keyword, String category, String order) {
@@ -81,13 +87,18 @@ public class TodoService {
         return todoMapper.searchTrashPage(scopeUserId(), keyword, category, order, PAGE_SIZE, offset);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void create(Todo todo) {
         // 所有者はリクエストの値を信用せず、認証済みユーザーから設定する。
         todo.setUserId(currentUserId());
+        // 監査は操作の試行を記録する。作成前なので対象IDはまだない。
+        auditService.log("CREATE_ATTEMPT", null, todo.getUserId());
         todoMapper.insert(todo);
+        historyMapper.insert(todo.getId(), todo.getUserId(), "CREATE");
         log.info("登録 id={}", todo.getId());
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void update(Todo todo) {
         Long userId = scopeUserId();
         Todo existing = todoMapper.findIncludingDeletedById(todo.getId());
@@ -97,10 +108,15 @@ public class TodoService {
         }
         // 管理者による編集でも、リクエスト値ではなく元の所有者を使用する。
         todo.setUserId(existing.getUserId());
-        todoMapper.update(todo);
+        Long actorId = currentUserId();
+        auditService.log("UPDATE_ATTEMPT", todo.getId(), actorId);
+        if (todoMapper.update(todo) > 0) {
+            historyMapper.insert(todo.getId(), actorId, "UPDATE");
+        }
         log.info("編集 id={}", todo.getId());
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
         Long userId = scopeUserId();
         Todo existing = todoMapper.findIncludingDeletedById(id);
@@ -108,11 +124,15 @@ public class TodoService {
         if (existing == null) {
             throw new TodoNotFoundException(id);
         }
-        todoMapper.deleteById(userId, id);
+        Long actorId = currentUserId();
+        auditService.log("DELETE_ATTEMPT", id, actorId);
+        if (todoMapper.deleteById(userId, id) > 0) {
+            historyMapper.insert(id, actorId, "DELETE");
+        }
         log.info("削除 id={}", id);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     @PreAuthorize("hasRole('ADMIN')")
     public int bulkDelete(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
@@ -127,26 +147,40 @@ public class TodoService {
         for (Long id : distinctIds) {
             checkOwner(todoMapper.findIncludingDeletedById(id), userId);
         }
+        Long actorId = currentUserId();
+        for (Long id : distinctIds) {
+            auditService.log("BULK_DELETE_ATTEMPT", id, actorId);
+        }
+        // 削除前の有効な対象だけを記録する。後続のUPDATE失敗時には履歴も戻る。
+        historyMapper.insertBulkDelete(userId, actorId, distinctIds);
         int deleted = todoMapper.bulkDeleteByIds(userId, distinctIds);
         log.info("一括削除 件数={}", deleted);
         return deleted;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean restore(Long id) {
         Long userId = scopeUserId();
         checkOwner(todoMapper.findIncludingDeletedById(id), userId);
+        Long actorId = currentUserId();
+        auditService.log("RESTORE_ATTEMPT", id, actorId);
         boolean restored = todoMapper.restoreById(userId, id) > 0;
         if (restored) {
+            historyMapper.insert(id, actorId, "RESTORE");
             log.info("復元 id={}", id);
         }
         return restored;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     public boolean togglePinned(Long id) {
         Long userId = scopeUserId();
         checkOwner(todoMapper.findIncludingDeletedById(id), userId);
+        Long actorId = currentUserId();
+        auditService.log("TOGGLE_PIN_ATTEMPT", id, actorId);
         boolean toggled = todoMapper.togglePinned(userId, id) > 0;
         if (toggled) {
+            historyMapper.insert(id, actorId, "TOGGLE_PIN");
             log.info("印を切り替え id={}", id);
         }
         return toggled;
