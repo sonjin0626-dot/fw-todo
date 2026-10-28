@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.server.ResponseStatusException;
+import com.example.todoapp.exception.BusinessException;
 
 @Service
 @Validated
@@ -35,12 +36,12 @@ public class AdminUserService {
 
     public void update(Long id, String role, boolean enabled) {
         if (!List.of("ADMIN", "USER").contains(role)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ロールが正しくありません");
+            throw new BusinessException("INVALID_ROLE", "ロールが正しくありません");
         }
         User user = findById(id);
         if (user.getUsername().equals(SecurityContextHolder.getContext().getAuthentication().getName())
                 && (!enabled || !"ADMIN".equals(role))) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "自分自身の管理者権限・有効状態は解除できません");
+            throw new BusinessException("SELF_ACCESS_CHANGE", "自分自身の管理者権限・有効状態は解除できません");
         }
         user.setRole(role);
         user.setEnabled(enabled);
@@ -52,10 +53,10 @@ public class AdminUserService {
         User user = users.findByIdForUpdate(id);
         if (user == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "ユーザーが見つかりません");
         if (!List.of("ADMIN", "USER").contains(form.getRole() == null ? "" : form.getRole())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ロールが正しくありません");
+            throw new BusinessException("INVALID_ROLE", "ロールが正しくありません");
         }
         if (isCurrentUser(user) && (!form.isEnabled() || !"ADMIN".equals(form.getRole()))) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "自分自身の管理者権限・有効状態は解除できません");
+            throw new BusinessException("SELF_ACCESS_CHANGE", "自分自身の管理者権限・有効状態は解除できません");
         }
         user.setUsername(form.getUsername());
         user.setRole(form.getRole());
@@ -72,7 +73,7 @@ public class AdminUserService {
         User target = users.findByIdForUpdate(id);
         if (target == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "ユーザーが見つかりません");
         if (isCurrentUser(target)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "自分自身のアカウントは削除できません");
+            throw new BusinessException("SELF_DELETE", "自分自身のアカウントは削除できません");
         }
         todos.deleteByUserId(id);
         users.deleteById(id);

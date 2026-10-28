@@ -486,6 +486,7 @@ class TodoSearchTests {
         todo.setId(7L);
         todo.setTitle("delete-me");
         when(todoMapper.findById(7L)).thenReturn(todo);
+        when(todoMapper.findIncludingDeletedById(7L)).thenReturn(todo);
         mockMvc.perform(get("/todos/7/delete"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("delete"));

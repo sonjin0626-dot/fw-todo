@@ -4,20 +4,14 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,8 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.todoapp.Todo;
 import com.example.todoapp.TodoService;
+import com.example.todoapp.exception.TodoNotFoundException;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
 @RestController
@@ -59,7 +53,7 @@ public class TodoApiController {
     public ResponseEntity<?> getById(@PathVariable("id") Long id) {
         Todo todo = todoService.findById(id);
         if (todo == null) {
-            return notFound(id);
+            throw new TodoNotFoundException(id);
         }
         return ResponseEntity.ok(TodoDto.from(todo));
     }
@@ -133,7 +127,7 @@ public class TodoApiController {
             @Valid @RequestBody TodoRequest request) {
         Todo existing = todoService.findById(id);
         if (existing == null) {
-            return notFound(id);
+            throw new TodoNotFoundException(id);
         }
         Todo todo = request.toTodo();
         todo.setId(id);
@@ -145,39 +139,10 @@ public class TodoApiController {
     public ResponseEntity<?> delete(@PathVariable("id") Long id) {
         Todo existing = todoService.findById(id);
         if (existing == null) {
-            return notFound(id);
+            throw new TodoNotFoundException(id);
         }
         todoService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ProblemDetail> handleValidationErrors(
-            MethodArgumentNotValidException exception, HttpServletRequest request) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                HttpStatus.BAD_REQUEST, "入力に誤りがあります");
-        problem.setType(URI.create("about:blank"));
-        problem.setTitle("Bad Request");
-        problem.setInstance(URI.create(request.getRequestURI()));
-        Map<String, String> fieldMessages = new LinkedHashMap<>();
-        exception.getBindingResult().getFieldErrors()
-                .forEach(error -> fieldMessages.putIfAbsent(error.getField(), error.getDefaultMessage()));
-        problem.setProperty("errors", fieldMessages.entrySet().stream()
-                .map(error -> Map.of("field", error.getKey(), "message", error.getValue()))
-                .toList());
-        return ResponseEntity.badRequest()
-                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-                .body(problem);
-    }
-
-    private ResponseEntity<ProblemDetail> notFound(Long id) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
-                HttpStatus.NOT_FOUND, "ID " + id + " のやることは見つかりませんでした。");
-        problem.setType(URI.create("about:blank"));
-        problem.setTitle("Not Found");
-        problem.setInstance(URI.create("/api/todos/" + id));
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .contentType(MediaType.APPLICATION_PROBLEM_JSON)
-                .body(problem);
-    }
 }

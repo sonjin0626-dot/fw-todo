@@ -99,6 +99,25 @@ UPDATE users SET role = 'ADMIN' WHERE username = 'sonjin';
 
 添付の `/todo` はこのアプリの既存URL `/todos` に、`TodoController` は `HomeController` に対応させています。既存のSpring Boot 4 / Java 21の構成を維持しています。画面を非表示にするだけでなく、URL・メソッド・所有者の検査をサーバー側でも行います。
 
+## 例外ハンドリング
+
+画面用の `exception/GlobalExceptionHandler` とAPI用の `api/RestExceptionHandler` で例外を共通処理します。API用ハンドラーを優先し、画面にはHTML、`/api/**` には従来の `application/problem+json` 形式を返します。URLやHTTPメソッドの解決時に発生するAPIエラーもJSONで返します。
+
+| 状況 | HTTPステータス | 応答 |
+| --- | --- | --- |
+| ToDoが見つからない | 404 | `TodoNotFoundException` → `error/404.html`、APIは `code: NOT_FOUND`。画面の編集・削除確認は従来の一覧へのリダイレクトから404表示へ変更。 |
+| 業務上できない操作 | 400 | `BusinessException` → `error/business.html`、APIは業務エラーコードと説明。管理者自身の削除・降格・無効化や不正なロールなどに使用。 |
+| APIの入力チェックエラー | 400 | `code: VALIDATION_ERROR` と既存の項目別 `errors`。 |
+| 不正なJSON・日付・IDなど | 400 | 技術的な詳細を含まない説明。対応していないHTTPメソッドは405と `Allow` ヘッダーを保持。 |
+| 権限不足 | 403 | 既存の権限制御を維持。コントローラー・サービスで発生した拒否は画面用403ページ、API用JSONへ変換。ログイン・CSRFなどフィルターでの判定はSpring Securityが処理。 |
+| 予期しない例外 | 500 | `error/500.html`、APIは `code: INTERNAL_SERVER_ERROR`。例外の詳細・スタックトレースはサーバーログに記録。 |
+
+APIの既存フィールド `type`、`title`、`status`、`detail`、`instance` を保持し、`code` と日時の `timestamp` を追加しています。`BusinessException` のメッセージには利用者に公開できる説明だけを渡してください。
+
+このプロジェクトのSpring Boot 4に合わせて `spring.web.error.include-*` を設定し、Spring Boot標準のエラー応答でも例外名・内部メッセージ・スタックトレース・バインドの詳細を公開しないようにしています。404・500ページには一覧へ戻るリンクを設けています。存在しないToDoへの更新・削除・確認も404となり、成功通知を出しません。復元・印の切替・一括削除の既存の結果通知は維持しています。
+
+想定内の業務エラー・不正なリクエストはWARN、予期しない例外はERRORで記録します。祝日API・天気APIの取得失敗もWARNを出力します。追加の `ExceptionHandlingTests` と所有者管理の統合テストで、ステータス、HTML/JSONの切替、入力チェック、内部情報の非表示、例外ログ、権限制御を検証します。
+
 ## テスト
 
 Windowsでは `mvnw.cmd` がプロジェクト指定のMaven 3.10.0を取得・起動します。動作確認は `.\mvnw.cmd -v`、テストは次のコマンドで実行できます。別途Mavenをインストールする必要はありません。

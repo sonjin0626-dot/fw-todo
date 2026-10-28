@@ -8,7 +8,9 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 public class HolidayClient {
 
@@ -37,6 +39,7 @@ public class HolidayClient {
             }
             return new FetchResult(holidays, false);
         } catch (RestClientException ex) {
+            log.warn("祝日APIの取得に失敗しました: {}", ex.toString());
             return new FetchResult(Map.of(), true);
         }
     }

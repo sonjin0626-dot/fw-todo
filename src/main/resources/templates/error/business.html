@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="ja" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>操作を完了できませんでした</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<main class="container auth-container">
+    <h1 class="page-title">操作を完了できませんでした</h1>
+    <p th:text="${errorMessage ?: '入力内容や操作手順を確認してください。'}"></p>
+    <p th:if="${errorCode != null}">エラーコード：<span th:text="${errorCode}"></span></p>
+    <p><a th:href="@{/todos}" class="btn btn-primary">ToDo一覧に戻る</a></p>
+</main>
+</body>
+</html>

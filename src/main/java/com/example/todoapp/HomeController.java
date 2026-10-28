@@ -2,7 +2,6 @@ package com.example.todoapp;
 
 import java.util.List;
 
-import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,7 +14,9 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-import org.springframework.web.server.ResponseStatusException;
+
+import com.example.todoapp.exception.BusinessException;
+import com.example.todoapp.exception.TodoNotFoundException;
 
 import jakarta.validation.Valid;
 
@@ -95,8 +96,7 @@ public class HomeController {
     public String edit(@PathVariable("id") Long id, Model model, RedirectAttributes redirectAttributes) {
         Todo todo = todoService.findById(id);
         if (todo == null) {
-            redirectAttributes.addFlashAttribute("message", "見つかりませんでした");
-            return "redirect:/todos";
+            throw new TodoNotFoundException(id);
         }
         model.addAttribute("todo", todo);
         model.addAttribute("id", id);
@@ -134,8 +134,7 @@ public class HomeController {
     public String deleteConfirm(@PathVariable("id") Long id, Model model, RedirectAttributes redirectAttributes) {
         Todo todo = todoService.findById(id);
         if (todo == null) {
-            redirectAttributes.addFlashAttribute("message", "見つかりませんでした");
-            return "redirect:/todos";
+            throw new TodoNotFoundException(id);
         }
         model.addAttribute("todo", todo);
         model.addAttribute("id", id);
@@ -161,7 +160,7 @@ public class HomeController {
         try {
             deleted = todoService.bulkDelete(ids);
         } catch (IllegalArgumentException exception) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "削除する項目の番号が正しくありません", exception);
+            throw new BusinessException("INVALID_TODO_ID", "削除する項目の番号が正しくありません");
         }
         redirectAttributes.addFlashAttribute("message", ids == null || ids.isEmpty()
                 ? "削除する項目を選んでください" : deleted + "件を削除しました");

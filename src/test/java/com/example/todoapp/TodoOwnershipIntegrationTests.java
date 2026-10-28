@@ -2,6 +2,8 @@ package com.example.todoapp;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.RequestDispatcher;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -65,6 +67,45 @@ class TodoOwnershipIntegrationTests {
                 .andExpect(redirectedUrl("/todos"))
                 .andExpect(org.springframework.security.test.web.servlet.response.SecurityMockMvcResultMatchers
                         .authenticated().withUsername("sonjin").withRoles("USER"));
+    }
+
+    @Test
+    void missingTodoCannotBeConfirmedUpdatedOrDeletedSuccessfully() throws Exception {
+        for (String action : List.of("confirm", "edit", "delete", "")) {
+            String path = "/todos/9223372036854775807" + (action.isEmpty() ? "" : "/" + action);
+            mvc.perform(post(path).with(user("alice")).with(csrf())
+                    .param("title", "missing").param("category", "資格").param("priority", "2"))
+                    .andExpect(status().isNotFound()).andExpect(view().name("error/404"));
+        }
+        assertEquals(4L, jdbc.queryForObject("SELECT COUNT(*) FROM todos", Long.class));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {404, 500})
+    void servletErrorDispatchUsesCustomPagesAndHidesDetails(int statusCode) throws Exception {
+        // 完全なBoot構成で、コンテナから/errorへ転送された場合も確認する。
+        String internalDetail = "jdbc:mysql://internal-db/private-table";
+        mvc.perform(get("/error?trace=true&message=true").with(user("alice"))
+                .with(request -> { request.setDispatcherType(DispatcherType.ERROR); return request; })
+                .accept("text/html")
+                .requestAttr(RequestDispatcher.ERROR_STATUS_CODE, statusCode)
+                .requestAttr(RequestDispatcher.ERROR_REQUEST_URI, "/missing-page")
+                .requestAttr(RequestDispatcher.ERROR_EXCEPTION, new IllegalStateException(internalDetail))
+                .requestAttr(RequestDispatcher.ERROR_MESSAGE, internalDetail))
+                .andExpect(status().is(statusCode)).andExpect(view().name("error/" + statusCode))
+                .andExpect(content().string(containsString("ToDo一覧に戻る")))
+                .andExpect(content().string(not(containsString(internalDetail))));
+        mvc.perform(get("/error?trace=true&message=true").with(user("alice"))
+                .with(request -> { request.setDispatcherType(DispatcherType.ERROR); return request; })
+                .accept("application/json")
+                .requestAttr(RequestDispatcher.ERROR_STATUS_CODE, statusCode)
+                .requestAttr(RequestDispatcher.ERROR_EXCEPTION, new IllegalStateException(internalDetail))
+                .requestAttr(RequestDispatcher.ERROR_MESSAGE, internalDetail))
+                .andExpect(status().is(statusCode))
+                .andExpect(jsonPath("$.exception").doesNotExist())
+                .andExpect(jsonPath("$.message").doesNotExist())
+                .andExpect(jsonPath("$.trace").doesNotExist())
+                .andExpect(content().string(not(containsString(internalDetail))));
     }
 
     @Test

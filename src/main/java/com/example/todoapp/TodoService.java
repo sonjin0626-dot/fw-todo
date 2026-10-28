@@ -12,6 +12,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
 
 import lombok.extern.slf4j.Slf4j;
+import com.example.todoapp.exception.TodoNotFoundException;
 
 @Slf4j
 @Service
@@ -64,7 +65,11 @@ public class TodoService {
 
     public void checkAccess(Long id) {
         Long userId = scopeUserId();
-        checkOwner(todoMapper.findIncludingDeletedById(id), userId);
+        Todo todo = todoMapper.findIncludingDeletedById(id);
+        checkOwner(todo, userId);
+        if (todo == null) {
+            throw new TodoNotFoundException(id);
+        }
     }
 
     public long countTrash(String keyword, String category) {
@@ -88,7 +93,7 @@ public class TodoService {
         Todo existing = todoMapper.findIncludingDeletedById(todo.getId());
         checkOwner(existing, userId);
         if (existing == null) {
-            return;
+            throw new TodoNotFoundException(todo.getId());
         }
         // 管理者による編集でも、リクエスト値ではなく元の所有者を使用する。
         todo.setUserId(existing.getUserId());
@@ -98,7 +103,11 @@ public class TodoService {
 
     public void delete(Long id) {
         Long userId = scopeUserId();
-        checkOwner(todoMapper.findIncludingDeletedById(id), userId);
+        Todo existing = todoMapper.findIncludingDeletedById(id);
+        checkOwner(existing, userId);
+        if (existing == null) {
+            throw new TodoNotFoundException(id);
+        }
         todoMapper.deleteById(userId, id);
         log.info("削除 id={}", id);
     }

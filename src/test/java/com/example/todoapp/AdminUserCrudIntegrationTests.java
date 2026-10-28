@@ -117,11 +117,11 @@ class AdminUserCrudIntegrationTests {
     }
 
     @Test
-    void failedUserDeleteRollsBackRelatedTaskDeletion() {
+    void failedUserDeleteRollsBackRelatedTaskDeletion() throws Exception {
         jdbc.update("INSERT INTO todos (user_id, title, category) VALUES (?, 'rollback-task', '仕事')", ownerId);
         doThrow(new IllegalStateException("simulated delete failure")).when(mapper).deleteById(ownerId);
-        assertThrows(Exception.class, () -> mvc.perform(post("/admin/users/{id}/delete", ownerId)
-                .with(user("crudadmin")).with(csrf())));
+        mvc.perform(post("/admin/users/{id}/delete", ownerId).with(user("crudadmin")).with(csrf()))
+                .andExpect(status().isInternalServerError()).andExpect(view().name("error/500"));
         assertNotNull(mapper.findById(ownerId));
         assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM todos WHERE user_id = ?", Integer.class, ownerId));
     }

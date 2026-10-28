@@ -103,13 +103,13 @@ class TodoDeletionTests {
         assertTrue(service.search("", "", "asc").isEmpty());
         assertNull(service.findById(id));
         assertTrue(api.list("", "", "asc", null, null).isEmpty());
-        assertEquals(404, api.getById(id).getStatusCode().value());
-        assertEquals(404, api.delete(id).getStatusCode().value());
+        assertThrows(com.example.todoapp.exception.TodoNotFoundException.class, () -> api.getById(id));
+        assertThrows(com.example.todoapp.exception.TodoNotFoundException.class, () -> api.delete(id));
         TodoRequest request = new TodoRequest();
         request.setTitle("blocked-update");
         request.setCategory("プログラミング");
         request.setPriority(2);
-        assertEquals(404, api.update(id, request).getStatusCode().value());
+        assertThrows(com.example.todoapp.exception.TodoNotFoundException.class, () -> api.update(id, request));
         assertTrue(tools.listTodos(null, null, null, null).isEmpty());
         assertThrows(IllegalArgumentException.class, () -> tools.getTodo(id));
         assertThrows(IllegalArgumentException.class,
