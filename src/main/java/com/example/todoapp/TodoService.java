@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -25,13 +26,15 @@ public class TodoService {
     private final UserMapper userMapper;
     private final HistoryMapper historyMapper;
     private final AuditService auditService;
+    private final ApplicationEventPublisher events;
 
     public TodoService(TodoMapper todoMapper, UserMapper userMapper,
-            HistoryMapper historyMapper, AuditService auditService) {
+            HistoryMapper historyMapper, AuditService auditService, ApplicationEventPublisher events) {
         this.todoMapper = todoMapper;
         this.userMapper = userMapper;
         this.historyMapper = historyMapper;
         this.auditService = auditService;
+        this.events = events;
     }
 
     public List<Todo> search(String keyword, String category, String order) {
@@ -95,6 +98,7 @@ public class TodoService {
         auditService.log("CREATE_ATTEMPT", null, todo.getUserId());
         todoMapper.insert(todo);
         historyMapper.insert(todo.getId(), todo.getUserId(), "CREATE");
+        events.publishEvent(new TodoCreatedEvent(todo.getId(), todo.getUserId()));
         log.info("登録 id={}", todo.getId());
     }
 

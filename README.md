@@ -211,6 +211,34 @@ Docker Composeでは `fw-upload-data` ボリュームを `/app/uploads` にマ�
 
 主な実装は `TodoAttachment.java`、`AttachmentMapper.java` / `mapper/AttachmentMapper.xml`、`FileStorageService.java`、`TodoAttachmentController.java`、`templates/attachments.html` です。教材のInteger IDを既存のLong IDへ、`/todo` を `/todos` へ合わせ、Spring Boot 4 / Java 21の構成を維持しています。`TodoAttachmentIntegrationTests` では実際のDB・ファイル保存、権限制御、CSRF、日本語名、サイズ上限、ロールバックを検証します。10MBちょうどの受け付けと超過時の413は、組み込みサーバーへ実際のHTTPリクエストを送って確認します。
 
+## 非同期処理
+
+教材の非同期処理を既存のSpring Boot 4 / Java 21、Long型ID、`TodoService` の認証・所有者管理に合わせています。追加の依存関係やDB変更はありません。
+
+画面上部の「ToDo集計」（`GET /dashboard`）で、合計・完了・未完了・期限切れ・今日から3日以内が期限の件数・ゴミ箱件数を表示します。通常の件数にはゴミ箱を含めません。一般ユーザーは本人のToDo、管理者は全ユーザーが対象です。日本語・英語の表示に対応します。
+
+| ファイル | 役割 |
+| --- | --- |
+| `TodoappApplication.java` | `@EnableAsync` で非同期処理を有効化。 |
+| `AsyncConfig.java` | `ThreadPoolTaskExecutor` を2つ定義。`taskExecutor` は通常5・最大10スレッド・待機25件、`emailExecutor` は通常2・最大5スレッド・待機100件。終了時は最大30秒待機。`void` の非同期メソッドの例外を `AsyncUncaughtExceptionHandler` で記録。 |
+| `TodoService.java` / `TodoCreatedEvent.java` | ToDo登録・履歴保存の後に、IDだけを持つ不変イベントを発行。画面・API・MCPに共通で適用。 |
+| `TodoCreatedListener.java` / `NotificationService.java` | トランザクションの確定後、別Beanの `@Async("emailExecutor")` を呼ぶ。ロールバック時は通知せず、キューが満杯の場合は通知の受付失敗をログに記録。 |
+| `ReportService.java` / `Report.java` / `Statistics.java` | `@Async("taskExecutor")` で集計し、`CompletableFuture` で結果を返す。既存の `TodoService` を通してデータを取得。 |
+| `DashboardController.java` / `templates/dashboard.html` | 2つの集計を並列に開始し、`CompletableFuture.allOf(...).get(timeout, TimeUnit.SECONDS)` で結果を待つ。成功時だけ両結果を表示。 |
+| `AsyncProcessingIntegrationTests.java` / `DashboardControllerTests.java` | 実際のSpringプロキシとH2で別スレッド・並列実行・所有者・管理者の範囲・コミット後通知・ロールバック・例外ログを検証。Controllerではタイムアウト・中断・キュー満杯・失敗時の表示を確認。 |
+
+登録後の通知は、現状ではサーバーログへの「ToDo登録完了通知」です。このアプリにはメールアドレス項目とSMTP設定がないため、実際のメールは送信しません。教材の `emailExecutor` という名前を維持しています。メール送信を追加する際は `NotificationService` の通知処理と送信先・SMTP設定を追加してください。待機を再現するための `Thread.sleep` は入れていません。
+
+`taskExecutor` のスレッド名は `Async-`、通知用は `Email-` で始まります。各タスクには呼び出し時の認証を引き継ぎ、実行終了時にワーカースレッドから除去します。これは認証をスレッド単位で保持する既存の `TodoService` を使うためです（[Spring Security公式](https://docs.spring.io/spring-security/reference/servlet/integrations/concurrency.html)）。通知は [Springのトランザクションイベント](https://docs.spring.io/spring-framework/reference/data-access/transaction/event.html) の `AFTER_COMMIT` を使います。同じクラス内で非同期メソッドを直接呼ぶとプロキシを通らないため、Controller・Listenerから別のServiceへ呼び出します。
+
+集計の待機時間は `application.properties` の `app.async.report-timeout-seconds=3` で変更できます。タイムアウト・キュー満杯・中断ではHTTP 503、予期しない集計失敗では500を返し、画面に再集計の案内を表示します。非同期側の認可失敗は既存の403画面へ引き継ぎます。タイムアウトは画面の待機を終えるもので、既に実行中のDB処理は継続する場合があります。
+
+通知はメモリ上のキューで処理するため、アプリの強制終了やキュー満杯のときの配信保証・自動再送はありません。既存AOPの実行時間は各Serviceメソッドの計測で、Controller全体の待機時間ではありません。
+
+```powershell
+.\mvnw.cmd "-Dtest=AsyncProcessingIntegrationTests,DashboardControllerTests" test
+```
+
 ## テスト
 
 Windowsでは `mvnw.cmd` がプロジェクト指定のMaven 3.10.0を取得・起動します。動作確認は `.\mvnw.cmd -v`、テストは次のコマンドで実行できます。別途Mavenをインストールする必要はありません。

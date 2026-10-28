@@ -54,7 +54,8 @@ class TodoPinTests {
         }
         mapper = session.getMapper(TodoMapper.class);
         service = new TodoService(mapper, TodoTestUsers.authenticatedMapper(),
-                org.mockito.Mockito.mock(HistoryMapper.class), org.mockito.Mockito.mock(AuditService.class));
+                org.mockito.Mockito.mock(HistoryMapper.class), org.mockito.Mockito.mock(AuditService.class),
+                org.mockito.Mockito.mock(org.springframework.context.ApplicationEventPublisher.class));
     }
 
     @AfterEach

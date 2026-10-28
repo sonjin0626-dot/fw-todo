@@ -37,6 +37,7 @@ class TodoServiceTest {
     @Mock UserMapper userMapper;
     @Mock HistoryMapper historyMapper;
     @Mock AuditService auditService;
+    @Mock org.springframework.context.ApplicationEventPublisher events;
     @InjectMocks TodoService service;
 
     @AfterEach

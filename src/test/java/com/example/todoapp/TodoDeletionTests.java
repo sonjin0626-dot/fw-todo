@@ -65,7 +65,8 @@ class TodoDeletionTests {
         }
         mapper = session.getMapper(TodoMapper.class);
         service = new TodoService(mapper, TodoTestUsers.authenticatedMapper(),
-                mock(HistoryMapper.class), mock(AuditService.class));
+                mock(HistoryMapper.class), mock(AuditService.class),
+                mock(org.springframework.context.ApplicationEventPublisher.class));
         api = new TodoApiController(service);
         HolidayClient holidays = mock(HolidayClient.class);
         when(holidays.fetchHolidays()).thenReturn(new HolidayClient.FetchResult(Map.of(), false));

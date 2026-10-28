@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{dashboard.title}">ToDo集計</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="container">
+    <nav th:replace="~{fragments/language :: language}"></nav>
+    <nav th:replace="~{fragments/account :: account}"></nav>
+    <h1 class="page-title" th:text="#{dashboard.title}">ToDo集計</h1>
+    <p sec:authorize="hasRole('USER')" th:text="#{dashboard.mine}"></p>
+    <p sec:authorize="hasRole('ADMIN')" th:text="#{dashboard.allUsers}"></p>
+    <p class="flash" role="alert" th:if="${errorKey != null}" th:text="${#messages.msg(errorKey)}"></p>
+    <div th:if="${report != null and stats != null}">
+        <table class="todo-table">
+            <caption th:text="#{dashboard.summary}">集計結果</caption>
+            <tbody>
+            <tr><th scope="row" th:text="#{dashboard.total}"></th><td th:text="${report.totalCount}"></td></tr>
+            <tr><th scope="row" th:text="#{dashboard.completed}"></th><td th:text="${report.completedCount}"></td></tr>
+            <tr><th scope="row" th:text="#{dashboard.pending}"></th><td th:text="${report.pendingCount}"></td></tr>
+            <tr><th scope="row" th:text="#{dashboard.overdue}"></th><td th:text="${stats.overdueCount}"></td></tr>
+            <tr><th scope="row" th:text="#{dashboard.nearDeadline}"></th><td th:text="${stats.nearDeadlineCount}"></td></tr>
+            <tr><th scope="row" th:text="#{dashboard.trash}"></th><td th:text="${stats.trashCount}"></td></tr>
+            </tbody>
+        </table>
+        <p><span th:text="#{dashboard.generatedAt}"></span>: <time th:text="${#temporals.format(report.generatedAt, 'yyyy-MM-dd HH:mm:ss')}"></time></p>
+    </div>
+    <a class="btn" th:href="@{/dashboard}" th:text="#{dashboard.refresh}">再集計</a>
+</div>
+</body>
+</html>

@@ -4,6 +4,7 @@
     <nav th:fragment="account" class="account-bar" th:attr="aria-label=#{auth.account}" sec:authorize="isAuthenticated()">
         <span th:text="#{auth.signedIn(${#authentication.name})}"></span>
         <a class="link" th:href="@{/todos}" th:text="#{todo.nav}">ToDo一覧</a>
+        <a class="link" th:href="@{/dashboard}" th:text="#{dashboard.title}">ToDo集計</a>
         <a class="link" sec:authorize="hasRole('ADMIN')" th:href="@{/admin/users}" th:text="#{admin.users}">ユーザー管理</a>
         <span sec:authorize="hasRole('ADMIN')" th:text="#{admin.administrator}">管理者</span>
         <form th:action="@{/logout}" method="post">
