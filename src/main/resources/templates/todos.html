@@ -10,6 +10,19 @@
 </head>
 <body>
     <div class="container">
+        <form id="quick-todo-form" class="quick-input-bar" th:unless="${trashMode}"
+              th:action="@{/api/todo}" method="post" novalidate
+              th:attr="data-error=#{quick.error},data-session-error=#{quick.sessionError},data-success=#{quick.success}">
+            <label for="quick-todo-title" th:text="#{quick.label}">クイック入力</label>
+            <div class="quick-input-controls">
+                <input class="form-input" id="quick-todo-title" name="title" type="text"
+                       maxlength="255" autocomplete="off" aria-describedby="quick-todo-error"
+                       th:placeholder="#{quick.placeholder}">
+                <button class="btn" type="submit" th:text="#{quick.add}">追加</button>
+            </div>
+            <p id="quick-todo-error" class="quick-input-error" role="alert" hidden></p>
+            <span id="quick-todo-status" class="quick-input-status" role="status" aria-live="polite"></span>
+        </form>
         <nav th:replace="~{fragments/language :: language}"></nav>
         <nav th:replace="~{fragments/account :: account}"></nav>
         <p class="flash flash-msg" role="status" th:if="${message != null}" th:text="${message}"></p>
@@ -51,8 +64,8 @@
             <a class="link" th:unless="${trashMode}" th:href="@{/todos(trash=1)}" th:text="#{todo.viewTrash}">消したものを見る</a>
             <a class="link" th:if="${trashMode}" th:href="@{/todos}" th:text="#{todo.back}">一覧へ</a>
         </form>
-        <p th:if="${#lists.isEmpty(todos)}" th:text="#{todo.empty}">条件に合うやることはありません</p>
-        <form sec:authorize="hasRole('ADMIN')" th:if="${!trashMode and !#lists.isEmpty(todos)}" id="bulk-delete-form" class="bulk-actions"
+        <p id="todo-empty" th:if="${#lists.isEmpty(todos)}" th:text="#{todo.empty}">条件に合うやることはありません</p>
+        <form sec:authorize="hasRole('ADMIN')" th:if="${!trashMode}" id="bulk-delete-form" class="bulk-actions"
               th:action="@{/todos/bulk-delete}" method="post">
             <input type="hidden" name="keyword" th:value="${keyword}">
             <input type="hidden" name="category" th:value="${category}">
@@ -63,7 +76,7 @@
             <span id="bulk-selection-count" role="status" th:text="#{bulk.count(0)}">0件選択</span>
             <small th:text="#{bulk.help}">全選択は、このページに表示中の項目が対象です。</small>
         </form>
-        <form th:if="${!trashMode and !#lists.isEmpty(todos)}" id="bulk-status-form"
+        <form th:if="${!trashMode}" id="bulk-status-form"
               th:action="@{/todos/bulk-status}" method="post">
             <input type="hidden" name="keyword" th:value="${keyword}">
             <input type="hidden" name="category" th:value="${category}">
@@ -83,7 +96,7 @@
         </form>
         <p th:if="${!trashMode and order == 'manual'}" th:text="#{reorder.help}"></p>
         <p id="reorder-status" role="status" aria-live="polite"></p>
-        <table class="todo-table" th:unless="${#lists.isEmpty(todos)}">
+        <table class="todo-table" id="todo-table" th:hidden="${#lists.isEmpty(todos)}">
             <thead>
                 <tr>
                     <th th:if="${!trashMode and order == 'manual'}" th:text="#{reorder.manual}" scope="col"></th>
@@ -102,59 +115,9 @@
                 </tr>
             </thead>
             <tbody id="todo-list" th:attr="data-reorder-url=@{/api/todo/reorder},data-enabled=${!trashMode and order == 'manual'},data-saved=#{reorder.saved},data-error=#{reorder.error}">
-                <tr th:each="todo : ${todos}"
-                    th:classappend="${todo.overdue ? 'overdue-row' : (todo.nearDeadline ? 'warning-row' : '')}"
-                    th:attr="data-id=${todo.id},data-due-date=${todo.dueDate},data-completed=${todo.completed}">
-                    <td th:if="${!trashMode and order == 'manual'}">
-                        <button type="button" class="drag-handle" draggable="true" th:attr="aria-label=#{reorder.handle}">⠿</button>
-                    </td>
-                    <td sec:authorize="hasRole('ADMIN')" th:unless="${trashMode}">
-                        <input type="checkbox" name="ids" th:value="${todo.id}" form="bulk-delete-form"
-                               th:attr="aria-label=#{todo.select(${todo.title})}">
-                    </td>
-                    <td th:unless="${trashMode}">
-                        <input type="checkbox" name="selectedIds" th:value="${todo.id}" form="bulk-status-form"
-                               th:disabled="${todo.userId != statusUserId}"
-                               th:attr="aria-label=#{todo.select(${todo.title})}">
-                    </td>
-                    <td th:unless="${trashMode}">
-                        <form th:action="@{/todos/{id}/pin(id=${todo.id})}" method="post">
-                            <input type="hidden" name="keyword" th:value="${keyword}">
-                            <input type="hidden" name="category" th:value="${category}">
-                            <input type="hidden" name="order" th:value="${order}">
-                            <input type="hidden" name="includeCompleted" th:value="${includeCompleted}">
-                            <input type="hidden" name="page" th:value="${page}">
-                            <button class="btn sub" type="submit" th:attr="aria-pressed=${todo.pinned == true}"
-                                    th:text="${todo.pinned == true ? #messages.msg('todo.pinRemove') : #messages.msg('todo.pinAdd')}"></button>
-                        </form>
-                    </td>
-                    <td sec:authorize="hasRole('ADMIN')" th:text="${todo.userId}"></td>
-                    <td><span th:if="${trashMode}" th:text="${todo.title}"></span><a th:unless="${trashMode}" th:href="@{/todos/{id}(id=${todo.id})}" th:text="${todo.title}"></a><div th:if="${!trashMode and todo.subtaskCount > 0}"><progress max="100" th:value="${todo.progress}" th:attr="aria-label=#{subtask.progress}"></progress> <span th:text="${todo.progress + '% (' + todo.completedSubtaskCount + '/' + todo.subtaskCount + ')'}"></span></div></td>
-                    <td th:text="${#messages.msgOrNull('category.' + todo.category) ?: todo.category}"></td>
-                    <td>
-                        <span class="priority-mark" th:if="${todo.priority == 1}" aria-hidden="true">★</span>
-                        <span th:text="${todo.priority == 1 ? #messages.msg('priority.high') : (todo.priority == 2 ? #messages.msg('priority.medium') : #messages.msg('priority.low'))}"></span>
-                    </td>
-                    <td th:text="${todo.dueDate == null ? '' : #temporals.format(todo.dueDate, 'yyyy-MM-dd')}"></td>
-                    <td>
-                        <span th:text="${todo.completed == true ? #messages.msg('todo.completed') : #messages.msg('todo.incomplete')}"></span>
-                        <span th:if="${todo.completed == true and todo.completedAt != null}"
-                              th:text="|（${#temporals.format(todo.completedAt, 'yyyy-MM-dd')}）|"></span>
-                    </td>
-                    <td>
-                        <span th:unless="${trashMode}">
-                            <a class="link" th:href="@{/todos/{id}/edit(id=${todo.id})}" th:text="#{todo.edit}">編集</a>
-                            <a class="link" th:href="@{/todos/{id}/attach(id=${todo.id})}" th:text="#{attachment.title}">添付ファイル</a>
-                            <form th:action="@{/todos/{id}/duplicate(id=${todo.id})}" method="post" style="display:inline" onsubmit="this.querySelector('button[type=submit]').disabled=true">
-                                <button class="btn" type="submit" th:text="#{todo.duplicate}">複製</button>
-                            </form>
-                            <a class="link" th:href="@{/todos/{id}/delete(id=${todo.id})}" th:text="#{common.delete}">削除</a>
-                        </span>
-                        <form th:if="${trashMode}" th:action="@{/todos/{id}/restore(id=${todo.id})}" method="post">
-                            <button class="btn" type="submit" th:text="#{todo.restore}">戻す</button>
-                        </form>
-                    </td>
-                </tr>
+                <th:block th:each="todo : ${todos}">
+                    <tr th:replace="~{fragments/todo-row :: row(${todo})}"></tr>
+                </th:block>
             </tbody>
         </table>
         <nav th:if="${totalCount > 0}" th:attr="aria-label=#{todo.pages}">
@@ -166,16 +129,21 @@
             </span>
         </nav>
     </div>
+    <template id="quick-todo-row" th:unless="${trashMode}">
+        <tr th:replace="~{fragments/todo-row :: row(${quickTodo})}"></tr>
+    </template>
+    <script th:src="@{/js/quick-input.js}" defer></script>
     <script th:unless="${trashMode}" th:inline="javascript">
         const selectionMessage = /*[[#{bulk.count('COUNT_VALUE')}]]*/ "COUNT_VALUE selected";
         const deleteMessage = /*[[#{bulk.confirm('COUNT_VALUE')}]]*/ "Delete COUNT_VALUE tasks?";
         const bulkForm = document.getElementById('bulk-delete-form');
         const selectAll = document.getElementById('bulk-select-all');
         if (bulkForm && selectAll) {
-            const checkboxes = Array.from(document.querySelectorAll('input[name="ids"][form="bulk-delete-form"]'));
+            const getCheckboxes = () => Array.from(document.querySelectorAll('input[name="ids"][form="bulk-delete-form"]'));
             const deleteButton = document.getElementById('bulk-delete-button');
             const selectionCount = document.getElementById('bulk-selection-count');
             function updateSelection() {
+                const checkboxes = getCheckboxes();
                 const count = checkboxes.filter(checkbox => checkbox.checked).length;
                 deleteButton.disabled = count === 0;
                 selectionCount.textContent = selectionMessage.replace('COUNT_VALUE', count);
@@ -183,15 +151,17 @@
                 selectAll.indeterminate = count > 0 && count < checkboxes.length;
             }
             selectAll.addEventListener('change', () => {
-                for (const checkbox of checkboxes) {
+                for (const checkbox of getCheckboxes()) {
                     checkbox.checked = selectAll.checked;
                 }
                 updateSelection();
             });
-            for (const checkbox of checkboxes) {
-                checkbox.addEventListener('change', updateSelection);
-            }
+            document.addEventListener('change', event => {
+                if (event.target.matches('input[form="bulk-delete-form"]')) updateSelection();
+            });
+            document.addEventListener('todo:created', updateSelection);
             bulkForm.addEventListener('submit', event => {
+                const checkboxes = getCheckboxes();
                 const count = checkboxes.filter(checkbox => checkbox.checked).length;
                 if (count === 0 || !window.confirm(deleteMessage.replace('COUNT_VALUE', count))) {
                     event.preventDefault();
@@ -204,13 +174,14 @@
         (() => {
             const form = document.getElementById('bulk-status-form');
             if (form) {
-                const boxes = Array.from(document.querySelectorAll('input[form="bulk-status-form"][name="selectedIds"]:not(:disabled)'));
+                const getBoxes = () => Array.from(document.querySelectorAll('input[form="bulk-status-form"][name="selectedIds"]:not(:disabled)'));
                 const all = document.getElementById('status-select-all');
                 const bar = document.getElementById('bulk-status-bar');
                 const button = document.getElementById('bulk-status-button');
                 const countLabel = document.getElementById('bulk-status-count');
                 const message = /*[[#{bulk.count('COUNT_VALUE')}]]*/ 'COUNT_VALUE selected';
                 const update = () => {
+                    const boxes = getBoxes();
                     const count = boxes.filter(box => box.checked).length;
                     countLabel.textContent = message.replace('COUNT_VALUE', count);
                     bar.hidden = count === 0;
@@ -220,12 +191,15 @@
                     all.indeterminate = count > 0 && count < boxes.length;
                 };
                 all.addEventListener('change', () => {
-                    boxes.forEach(box => box.checked = all.checked);
+                    getBoxes().forEach(box => box.checked = all.checked);
                     update();
                 });
-                boxes.forEach(box => box.addEventListener('change', update));
+                document.addEventListener('change', event => {
+                    if (event.target.matches('input[form="bulk-status-form"]')) update();
+                });
+                document.addEventListener('todo:created', update);
                 form.addEventListener('submit', event => {
-                    if (!boxes.some(box => box.checked)) event.preventDefault();
+                    if (!getBoxes().some(box => box.checked)) event.preventDefault();
                     else button.disabled = true;
                 });
                 window.addEventListener('pageshow', update);

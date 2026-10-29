@@ -42,6 +42,16 @@ import jakarta.validation.Valid;
 @RestController
 public class TodoApiController {
 
+    @PostMapping("/api/todo")
+    public ResponseEntity<TodoDto> quickCreate(@Valid @RequestBody QuickTodoRequest request) {
+        TodoRequest input = new TodoRequest();
+        input.setTitle(request.title().strip());
+        input.setCategory("プログラミング");
+        input.setPriority(2);
+        input.setCompleted(false);
+        return create(input);
+    }
+
     @PutMapping({"/api/todo/reorder", "/api/todos/reorder"})
     public ResponseEntity<Void> reorder(@RequestBody List<ReorderRequest> requests) {
         todoService.updateDisplayOrder(requests);

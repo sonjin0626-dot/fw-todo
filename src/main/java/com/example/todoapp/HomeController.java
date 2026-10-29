@@ -135,6 +135,17 @@ public class HomeController {
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalCount", totalCount);
         model.addAttribute("statusUserId", todoService.currentUserId());
+        if (!trashMode) {
+            Todo quickTodo = new Todo();
+            quickTodo.setId(0L);
+            quickTodo.setUserId(todoService.currentUserId());
+            quickTodo.setTitle("");
+            quickTodo.setCategory("プログラミング");
+            quickTodo.setPriority(2);
+            quickTodo.setCompleted(false);
+            quickTodo.setPinned(false);
+            model.addAttribute("quickTodo", quickTodo);
+        }
         return "todos";
     }
 

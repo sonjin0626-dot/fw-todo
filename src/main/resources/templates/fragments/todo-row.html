@@ -1,0 +1,55 @@
+<!DOCTYPE html><html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security"><body><table><tbody>
+                <tr th:fragment="row(todo)"
+                    th:classappend="${todo.overdue ? 'overdue-row' : (todo.nearDeadline ? 'warning-row' : '')}"
+                    th:attr="data-id=${todo.id},data-due-date=${todo.dueDate},data-completed=${todo.completed}">
+                    <td th:if="${!trashMode and order == 'manual'}">
+                        <button type="button" class="drag-handle" draggable="true" th:attr="aria-label=#{reorder.handle}">⠿</button>
+                    </td>
+                    <td sec:authorize="hasRole('ADMIN')" th:unless="${trashMode}">
+                        <input type="checkbox" name="ids" th:value="${todo.id}" form="bulk-delete-form"
+                               th:attr="aria-label=#{todo.select(${todo.title})}">
+                    </td>
+                    <td th:unless="${trashMode}">
+                        <input type="checkbox" name="selectedIds" th:value="${todo.id}" form="bulk-status-form"
+                               th:disabled="${todo.userId != statusUserId}"
+                               th:attr="aria-label=#{todo.select(${todo.title})}">
+                    </td>
+                    <td th:unless="${trashMode}">
+                        <form th:action="@{/todos/{id}/pin(id=${todo.id})}" method="post">
+                            <input type="hidden" name="keyword" th:value="${keyword}">
+                            <input type="hidden" name="category" th:value="${category}">
+                            <input type="hidden" name="order" th:value="${order}">
+                            <input type="hidden" name="includeCompleted" th:value="${includeCompleted}">
+                            <input type="hidden" name="page" th:value="${page}">
+                            <button class="btn sub" type="submit" th:attr="aria-pressed=${todo.pinned == true}"
+                                    th:text="${todo.pinned == true ? #messages.msg('todo.pinRemove') : #messages.msg('todo.pinAdd')}"></button>
+                        </form>
+                    </td>
+                    <td sec:authorize="hasRole('ADMIN')" th:text="${todo.userId}"></td>
+                    <td><span th:if="${trashMode}" th:text="${todo.title}"></span><a data-quick-title th:unless="${trashMode}" th:href="@{/todos/{id}(id=${todo.id})}" th:text="${todo.title}"></a><div th:if="${!trashMode and todo.subtaskCount > 0}"><progress max="100" th:value="${todo.progress}" th:attr="aria-label=#{subtask.progress}"></progress> <span th:text="${todo.progress + '% (' + todo.completedSubtaskCount + '/' + todo.subtaskCount + ')'}"></span></div></td>
+                    <td th:text="${#messages.msgOrNull('category.' + todo.category) ?: todo.category}"></td>
+                    <td>
+                        <span class="priority-mark" th:if="${todo.priority == 1}" aria-hidden="true">★</span>
+                        <span th:text="${todo.priority == 1 ? #messages.msg('priority.high') : (todo.priority == 2 ? #messages.msg('priority.medium') : #messages.msg('priority.low'))}"></span>
+                    </td>
+                    <td th:text="${todo.dueDate == null ? '' : #temporals.format(todo.dueDate, 'yyyy-MM-dd')}"></td>
+                    <td>
+                        <span th:text="${todo.completed == true ? #messages.msg('todo.completed') : #messages.msg('todo.incomplete')}"></span>
+                        <span th:if="${todo.completed == true and todo.completedAt != null}"
+                              th:text="|（${#temporals.format(todo.completedAt, 'yyyy-MM-dd')}）|"></span>
+                    </td>
+                    <td>
+                        <span th:unless="${trashMode}">
+                            <a class="link" th:href="@{/todos/{id}/edit(id=${todo.id})}" th:text="#{todo.edit}">編集</a>
+                            <a class="link" th:href="@{/todos/{id}/attach(id=${todo.id})}" th:text="#{attachment.title}">添付ファイル</a>
+                            <form th:action="@{/todos/{id}/duplicate(id=${todo.id})}" method="post" style="display:inline" onsubmit="this.querySelector('button[type=submit]').disabled=true">
+                                <button class="btn" type="submit" th:text="#{todo.duplicate}">複製</button>
+                            </form>
+                            <a class="link" th:href="@{/todos/{id}/delete(id=${todo.id})}" th:text="#{common.delete}">削除</a>
+                        </span>
+                        <form th:if="${trashMode}" th:action="@{/todos/{id}/restore(id=${todo.id})}" method="post">
+                            <button class="btn" type="submit" th:text="#{todo.restore}">戻す</button>
+                        </form>
+                    </td>
+                </tr>
+</tbody></table></body></html>
