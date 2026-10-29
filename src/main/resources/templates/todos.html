@@ -12,7 +12,8 @@
     <div class="container">
         <nav th:replace="~{fragments/language :: language}"></nav>
         <nav th:replace="~{fragments/account :: account}"></nav>
-        <p class="flash" th:if="${message != null}" th:text="${message}"></p>
+        <p class="flash flash-msg" role="status" th:if="${message != null}" th:text="${message}"></p>
+        <p class="flash flash-msg" role="alert" th:if="${error != null}" th:text="${error}"></p>
         <h1 class="page-title" th:text="${trashMode ? #messages.msg('todo.trash') : #messages.msg('todo.list')}">一覧</h1>
         <p sec:authorize="hasRole('USER')" th:text="#{todo.mine(${totalCount})}"></p>
         <p sec:authorize="hasRole('ADMIN')" th:text="#{todo.allUsers(${totalCount})}"></p>
@@ -62,6 +63,24 @@
             <span id="bulk-selection-count" role="status" th:text="#{bulk.count(0)}">0件選択</span>
             <small th:text="#{bulk.help}">全選択は、このページに表示中の項目が対象です。</small>
         </form>
+        <form th:if="${!trashMode and !#lists.isEmpty(todos)}" id="bulk-status-form"
+              th:action="@{/todos/bulk-status}" method="post">
+            <input type="hidden" name="keyword" th:value="${keyword}">
+            <input type="hidden" name="category" th:value="${category}">
+            <input type="hidden" name="order" th:value="${order}">
+            <input type="hidden" name="includeCompleted" th:value="${includeCompleted}">
+            <input type="hidden" name="page" th:value="${page}">
+            <div id="bulk-status-bar" class="bulk-actions" hidden>
+                <span id="bulk-status-count" role="status" aria-live="polite"></span>
+                <label for="bulk-new-status" th:text="#{bulk.status.label}">変更後の状態</label>
+                <select id="bulk-new-status" class="form-input" name="newStatus">
+                    <option value="true" th:text="#{bulk.status.complete}">完了にする</option>
+                    <option value="false" th:text="#{bulk.status.reopen}">未完了に戻す</option>
+                </select>
+                <button class="btn" type="submit" id="bulk-status-button" disabled th:text="#{bulk.status.apply}">一括変更</button>
+                <small th:text="#{bulk.status.help}"></small>
+            </div>
+        </form>
         <p th:if="${!trashMode and order == 'manual'}" th:text="#{reorder.help}"></p>
         <p id="reorder-status" role="status" aria-live="polite"></p>
         <table class="todo-table" th:unless="${#lists.isEmpty(todos)}">
@@ -71,6 +90,7 @@
                     <th sec:authorize="hasRole('ADMIN')" th:unless="${trashMode}" scope="col">
                         <label><input type="checkbox" id="bulk-select-all" th:text="#{bulk.all}">全選択</label>
                     </th>
+                    <th th:unless="${trashMode}" scope="col"><label><input type="checkbox" id="status-select-all"><span th:text="#{bulk.status.all}">状態変更の全選択</span></label></th>
                     <th th:unless="${trashMode}" scope="col" th:text="#{todo.pin}">印</th>
                     <th sec:authorize="hasRole('ADMIN')" scope="col" th:text="#{todo.owner}">所有者ID</th>
                     <th scope="col" th:text="#{todo.title}">やること</th>
@@ -90,6 +110,11 @@
                     </td>
                     <td sec:authorize="hasRole('ADMIN')" th:unless="${trashMode}">
                         <input type="checkbox" name="ids" th:value="${todo.id}" form="bulk-delete-form"
+                               th:attr="aria-label=#{todo.select(${todo.title})}">
+                    </td>
+                    <td th:unless="${trashMode}">
+                        <input type="checkbox" name="selectedIds" th:value="${todo.id}" form="bulk-status-form"
+                               th:disabled="${todo.userId != statusUserId}"
                                th:attr="aria-label=#{todo.select(${todo.title})}">
                     </td>
                     <td th:unless="${trashMode}">
@@ -174,6 +199,46 @@
             });
             updateSelection();
         }
+    </script>
+    <script th:inline="javascript">
+        (() => {
+            const form = document.getElementById('bulk-status-form');
+            if (form) {
+                const boxes = Array.from(document.querySelectorAll('input[form="bulk-status-form"][name="selectedIds"]:not(:disabled)'));
+                const all = document.getElementById('status-select-all');
+                const bar = document.getElementById('bulk-status-bar');
+                const button = document.getElementById('bulk-status-button');
+                const countLabel = document.getElementById('bulk-status-count');
+                const message = /*[[#{bulk.count('COUNT_VALUE')}]]*/ 'COUNT_VALUE selected';
+                const update = () => {
+                    const count = boxes.filter(box => box.checked).length;
+                    countLabel.textContent = message.replace('COUNT_VALUE', count);
+                    bar.hidden = count === 0;
+                    button.disabled = count === 0;
+                    all.checked = boxes.length > 0 && count === boxes.length;
+                    all.disabled = boxes.length === 0;
+                    all.indeterminate = count > 0 && count < boxes.length;
+                };
+                all.addEventListener('change', () => {
+                    boxes.forEach(box => box.checked = all.checked);
+                    update();
+                });
+                boxes.forEach(box => box.addEventListener('change', update));
+                form.addEventListener('submit', event => {
+                    if (!boxes.some(box => box.checked)) event.preventDefault();
+                    else button.disabled = true;
+                });
+                window.addEventListener('pageshow', update);
+                update();
+            }
+            document.querySelectorAll('.flash-msg').forEach(message => {
+                setTimeout(() => {
+                    message.style.transition = 'opacity 0.5s';
+                    message.style.opacity = '0';
+                    setTimeout(() => message.remove(), 500);
+                }, 4000);
+            });
+        })();
     </script>
     <script th:src="@{/js/drag-sort.js}" defer></script>
 </body>

@@ -447,6 +447,47 @@ public class TodoService {
         return copy;
     }
 
+    /** 自分のタスクを一括更新します。子を持つ親の状態は既存どおり子から算出します。 */
+    @Transactional(rollbackFor = Exception.class)
+    public int bulkUpdateStatus(List<Long> ids, boolean completed) {
+        Long actorId = currentUserId();
+        if (ids == null || ids.isEmpty()) return 0;
+        if (ids.stream().anyMatch(id -> id == null || id <= 0)) {
+            throw new com.example.todoapp.exception.BusinessException("INVALID_TODO_ID", "項目の番号が正しくありません");
+        }
+        List<Todo> selected = new java.util.ArrayList<>();
+        // 全件の所有者確認を終えてから書き込み、他人のID混入時は全体を拒否する。
+        for (Long id : ids.stream().distinct().sorted().toList()) {
+            Todo todo = todoMapper.lockById(id);
+            checkOwner(todo, actorId);
+            if (todo != null) selected.add(todo);
+        }
+        var parents = new java.util.TreeSet<Long>();
+        List<Long> changed = new java.util.ArrayList<>();
+        for (Todo todo : selected) {
+            if (todo.getParentId() != null) {
+                requireParent(todo.getParentId());
+                parents.add(todo.getParentId());
+            }
+            if (!todoMapper.findSubtasks(todo.getId()).isEmpty()) {
+                parents.add(todo.getId());
+            } else if (Boolean.TRUE.equals(todo.getCompleted()) != completed) {
+                changed.add(todo.getId());
+            }
+        }
+        for (Long id : changed) auditService.log("BULK_STATUS_ATTEMPT", id, actorId);
+        int count = changed.isEmpty() ? 0 : todoMapper.bulkUpdateStatus(actorId, changed, completed);
+        for (Long id : changed) historyMapper.insert(id, actorId, "UPDATE");
+        for (Long parentId : parents) {
+            syncParent(parentId);
+            for (Todo before : selected) {
+                if (parentId.equals(before.getId()) && !before.getCompleted().equals(
+                        todoMapper.findById(parentId).getCompleted())) count++;
+            }
+        }
+        return count;
+    }
+
     private Todo copyTask(Todo original, Long parentId) {
         Todo copy = new Todo();
         copy.setUserId(original.getUserId());
@@ -569,7 +610,7 @@ public class TodoService {
      * @return 認証ユーザーのID（{@code null}にならない）
      * @throws AccessDeniedException 未認証、匿名認証、またはアカウントが存在しない・無効な場合
      */
-    private Long currentUserId() {
+    Long currentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || authentication instanceof AnonymousAuthenticationToken) {

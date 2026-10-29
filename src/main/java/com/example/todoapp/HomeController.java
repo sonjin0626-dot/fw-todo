@@ -134,6 +134,7 @@ public class HomeController {
         model.addAttribute("page", currentPage);
         model.addAttribute("totalPages", totalPages);
         model.addAttribute("totalCount", totalCount);
+        model.addAttribute("statusUserId", todoService.currentUserId());
         return "todos";
     }
 
@@ -303,6 +304,30 @@ public class HomeController {
     public String delete(@PathVariable("id") Long id, RedirectAttributes redirectAttributes) {
         todoService.delete(id);
         redirectAttributes.addFlashAttribute("message", message("flash.deleted"));
+        return "redirect:/todos";
+    }
+
+    /** 選択した自分のタスクの状態を一括変更し、検索条件を保って一覧へ戻します。 */
+    @PostMapping({"/todos/bulk-status", "/todo/bulk-status"})
+    public String bulkUpdateStatus(@RequestParam(name = "selectedIds", required = false) List<Long> ids,
+            @RequestParam boolean newStatus,
+            @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(defaultValue = "") String category,
+            @RequestParam(defaultValue = "asc") String order,
+            @RequestParam(defaultValue = "false") boolean includeCompleted,
+            @RequestParam(defaultValue = "1") int page, RedirectAttributes ra) {
+        if (ids == null || ids.isEmpty()) {
+            ra.addFlashAttribute("error", message("bulk.status.empty"));
+        } else {
+            int count = todoService.bulkUpdateStatus(ids, newStatus);
+            ra.addFlashAttribute("message", message("bulk.status.updated", count,
+                    message(newStatus ? "todo.completed" : "todo.incomplete")));
+        }
+        ra.addAttribute("keyword", keyword);
+        ra.addAttribute("category", category);
+        ra.addAttribute("order", "manual".equals(order) ? "manual" : ("desc".equals(order) ? "desc" : "asc"));
+        ra.addAttribute("includeCompleted", includeCompleted);
+        ra.addAttribute("page", Math.max(1, page));
         return "redirect:/todos";
     }
 

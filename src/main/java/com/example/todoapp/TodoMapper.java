@@ -49,6 +49,9 @@ public interface TodoMapper {
 
     int update(Todo todo);
 
+    int bulkUpdateStatus(@Param("userId") Long userId, @Param("ids") List<Long> ids,
+            @Param("completed") boolean completed);
+
     int deleteById(@Param("userId") Long userId, @Param("id") Long id);
 
     int bulkDeleteByIds(@Param("userId") Long userId, @Param("ids") List<Long> ids);

@@ -360,3 +360,4 @@ body {
 #todo-list .dragging { opacity: .4; outline: 2px dashed #3b82f6; }
 #todo-list .drag-over { box-shadow: 0 -3px #3b82f6; }
 #todo-list[aria-busy=true] .drag-handle { cursor: wait; }
+#bulk-status-bar[hidden] { display: none; }
