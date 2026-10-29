@@ -418,6 +418,48 @@ public class TodoService {
         return todo;
     }
 
+    /** 自分のタスクを独立した未完了タスクとして、任意で子タスクと一緒に複製します。 */
+    @Transactional(rollbackFor = Exception.class)
+    @Auditable(action = AuditLog.Action.CREATE)
+    public Todo duplicate(Long id, boolean includeSubtasks) {
+        Long actorId = currentUserId();
+        Todo original = findByIdWithSubtasks(id);
+        checkOwner(original, actorId);
+        auditService.log("CREATE_ATTEMPT", null, actorId);
+        Todo copy = copyTask(original, null);
+        String suffix = "（コピー）";
+        String title = original.getTitle();
+        int end = Math.min(title.length(), 255 - suffix.length());
+        if (end > 0 && Character.isHighSurrogate(title.charAt(end - 1))) end--;
+        copy.setTitle(title.substring(0, end) + suffix);
+        todoMapper.insert(copy);
+        historyMapper.insert(copy.getId(), actorId, "CREATE");
+        if (includeSubtasks) {
+            for (Todo child : original.getSubtasks()) {
+                checkOwner(child, actorId);
+                Todo childCopy = copyTask(child, copy.getId());
+                todoMapper.insert(childCopy);
+                historyMapper.insert(childCopy.getId(), actorId, "CREATE");
+                copy.getSubtasks().add(childCopy);
+            }
+        }
+        events.publishEvent(new TodoCreatedEvent(copy.getId(), actorId));
+        return copy;
+    }
+
+    private Todo copyTask(Todo original, Long parentId) {
+        Todo copy = new Todo();
+        copy.setUserId(original.getUserId());
+        copy.setParentId(parentId);
+        copy.setTitle(original.getTitle());
+        copy.setDetail(original.getDetail());
+        copy.setCategory(original.getCategory());
+        copy.setPriority(original.getPriority());
+        copy.setDueDate(original.getDueDate());
+        copy.setCompleted(false);
+        return copy;
+    }
+
     private Todo requireParent(Long id) {
         Todo parent = findById(id);
         if (parent == null) throw new TodoNotFoundException(id);

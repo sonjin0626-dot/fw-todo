@@ -34,6 +34,55 @@ class SubtaskIntegrationTests {
         service.create(parent); parentId = parent.getId();
     }
     @AfterEach void clear() { SecurityContextHolder.clearContext(); }
+    @Test void duplicatesFieldsAndActiveChildrenWithFreshState() {
+        service.addSubtask(parentId, "child");
+        Long childId = mapper.findSubtasks(parentId).getFirst().getId();
+        service.changeSubtask(parentId, childId, false);
+        jdbc.update("UPDATE todos SET detail='memo', due_date='2030-01-02', pinned=true WHERE id=?", parentId);
+        Todo copy = service.duplicate(parentId, true);
+        Todo saved = mapper.findById(copy.getId());
+        assertNotEquals(parentId, saved.getId());
+        assertEquals("Parent（コピー）", saved.getTitle());
+        assertEquals("memo", saved.getDetail());
+        assertEquals("資格", saved.getCategory());
+        assertEquals(2, saved.getPriority());
+        assertEquals(java.time.LocalDate.of(2030, 1, 2), saved.getDueDate());
+        assertFalse(saved.getCompleted());
+        assertNull(saved.getCompletedAt());
+        assertFalse(saved.getPinned());
+        assertNotNull(saved.getCreatedAt());
+        var children = mapper.findSubtasks(copy.getId());
+        assertEquals(1, children.size());
+        assertNotEquals(childId, children.getFirst().getId());
+        assertEquals("child", children.getFirst().getTitle());
+        assertFalse(children.getFirst().getCompleted());
+        assertTrue(mapper.findById(parentId).getCompleted());
+        assertTrue(mapper.findSubtasks(service.duplicate(parentId, false).getId()).isEmpty());
+        service.changeSubtask(parentId, childId, true);
+        assertTrue(mapper.findSubtasks(service.duplicate(parentId, true).getId()).isEmpty());
+        service.delete(parentId);
+        assertThrows(com.example.todoapp.exception.TodoNotFoundException.class, () -> service.duplicate(parentId, true));
+    }
+
+    @Test void duplicateEndpointOptionsAndSecurity() throws Exception {
+        service.addSubtask(parentId, "child");
+        var result = mvc.perform(post("/todos/" + parentId + "/duplicate").with(user("sonjin")).with(csrf())
+                .param("subtaskOption", "true"))
+            .andExpect(status().is3xxRedirection()).andExpect(flash().attributeExists("message")).andReturn();
+        String location = result.getResponse().getRedirectedUrl();
+        Long copyId = Long.valueOf(location.substring(location.lastIndexOf('/') + 1));
+        assertTrue(mapper.findSubtasks(copyId).isEmpty());
+        mvc.perform(get(location).with(user("sonjin"))).andExpect(status().isOk())
+            .andExpect(content().string(org.hamcrest.Matchers.containsString("subtaskOption")));
+        mvc.perform(post("/todos/" + parentId + "/duplicate").with(user("sonjin")))
+            .andExpect(status().isForbidden());
+        jdbc.update("INSERT INTO users(username,password,role) VALUES ('duplicate-other','unused','ADMIN')");
+        mvc.perform(post("/todos/" + parentId + "/duplicate").with(user("duplicate-other").roles("ADMIN")).with(csrf()))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/todo/999999999/duplicate").with(user("sonjin")).with(csrf()))
+            .andExpect(status().isNotFound());
+    }
+
     @Test void progressCompletionAndDeletion() {
         service.addSubtask(parentId, "one");
         service.addSubtask(parentId, "two");

@@ -7,10 +7,18 @@
 </head>
 <body><main class="container">
 <nav th:replace="~{fragments/language :: language}"></nav>
+<p class="flash" th:if="${message != null}" th:text="${message}"></p>
 <h1 class="page-title" th:text="${todo.title}"></h1>
 <p th:text="${todo.detail}"></p>
 <p><a class="link" th:href="@{/todos}" th:text="#{subtask.back}">一覧へ</a>
 <a class="link" th:href="@{/todos/{id}/edit(id=${todo.id})}" th:text="#{todo.edit}">編集</a></p>
+<form th:action="@{/todos/{id}/duplicate(id=${todo.id})}" method="post" onsubmit="this.querySelector('button[type=submit]').disabled=true">
+<input type="hidden" name="subtaskOption" value="true">
+<label th:if="${not #lists.isEmpty(todo.subtasks)}">
+<input type="checkbox" name="includeSubtasks" value="true" checked>
+<span th:text="#{todo.duplicateSubtasks}">サブタスクも複製する</span></label>
+<button class="btn btn-primary" type="submit" th:text="#{todo.duplicate}">複製</button>
+</form>
 <section th:unless="${todo.subtask}">
 <h2 th:text="#{subtask.heading}">サブタスク</h2>
 <p><span th:text="#{subtask.progress}">進捗</span> <span th:text="${todo.progress}">0</span>%

@@ -120,6 +120,9 @@
                         <span th:unless="${trashMode}">
                             <a class="link" th:href="@{/todos/{id}/edit(id=${todo.id})}" th:text="#{todo.edit}">編集</a>
                             <a class="link" th:href="@{/todos/{id}/attach(id=${todo.id})}" th:text="#{attachment.title}">添付ファイル</a>
+                            <form th:action="@{/todos/{id}/duplicate(id=${todo.id})}" method="post" style="display:inline" onsubmit="this.querySelector('button[type=submit]').disabled=true">
+                                <button class="btn" type="submit" th:text="#{todo.duplicate}">複製</button>
+                            </form>
                             <a class="link" th:href="@{/todos/{id}/delete(id=${todo.id})}" th:text="#{common.delete}">削除</a>
                         </span>
                         <form th:if="${trashMode}" th:action="@{/todos/{id}/restore(id=${todo.id})}" method="post">

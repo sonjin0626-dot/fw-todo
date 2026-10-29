@@ -76,10 +76,20 @@ public class HomeController {
         return userDetails == null ? null : userDetails.getUsername();
     }
 
+    /** 自分のタスクを複製し、新しい詳細画面へ遷移します。 */
+    @PostMapping({"/todos/{id}/duplicate", "/todo/{id}/duplicate"})
+    public String duplicate(@PathVariable Long id,
+            @RequestParam(required = false) Boolean includeSubtasks,
+            @RequestParam(defaultValue = "false") boolean subtaskOption,
+            RedirectAttributes ra) {
+        Todo copy = todoService.duplicate(id, includeSubtasks != null ? includeSubtasks : !subtaskOption);
+        ra.addFlashAttribute("message", message("todo.duplicated", copy.getTitle()));
+        return "redirect:/todos/" + copy.getId();
+    }
+
     /**
      * {@code GET /}でトップ画面を表示します。
-     *
-     * @param model 画面タイトルの格納先（{@code null}不可）
+     * @param model 画面タイトルの格納先
      * @return {@code "index"}
      */
     @GetMapping("/")
