@@ -264,8 +264,8 @@ class TodoSearchTests {
         BoundSql sql = configuration.getMappedStatement("com.example.todoapp.TodoMapper.search")
                 .getBoundSql(parameters);
 
-        assertEquals("SELECT id, user_id, title, detail, category, priority, due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at"
-                + " FROM todos WHERE user_id = ? AND deleted_at IS NULL AND title LIKE CONCAT('%', ?, '%') AND category = ?"
+        assertEquals("SELECT id, parent_id, user_id, title, detail, category, priority, due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at"
+                + " FROM todos WHERE parent_id IS NULL AND user_id = ? AND deleted_at IS NULL AND title LIKE CONCAT('%', ?, '%') AND category = ?"
                 + conditions + " ORDER BY due_date DESC", sql.getSql().replaceAll("\\s+", " ").strip());
         List<String> names = sql.getParameterMappings().stream().map(mapping -> mapping.getProperty()).toList();
         assertEquals(from != null, names.contains("from"));
@@ -279,8 +279,8 @@ class TodoSearchTests {
         defaults.put("order", "asc");
         BoundSql defaultSql = configuration.getMappedStatement("com.example.todoapp.TodoMapper.search")
                 .getBoundSql(defaults);
-        String where = " WHERE user_id = ? AND deleted_at IS NULL" + conditions;
-        assertEquals("SELECT id, user_id, title, detail, category, priority, due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at"
+        String where = " WHERE parent_id IS NULL AND user_id = ? AND deleted_at IS NULL" + conditions;
+        assertEquals("SELECT id, parent_id, user_id, title, detail, category, priority, due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at"
                 + " FROM todos" + where + " ORDER BY due_date ASC",
                 defaultSql.getSql().replaceAll("\\s+", " ").strip());
     }
@@ -305,12 +305,12 @@ class TodoSearchTests {
         });
         BoundSql sql = configuration.getMappedStatement("com.example.todoapp.TodoMapper.search")
                 .getBoundSql(parameters);
-        String conditions = "user_id = ? AND deleted_at IS NULL" + (includeCompleted ? "" : " AND completed = false");
+        String conditions = "parent_id IS NULL AND user_id = ? AND deleted_at IS NULL" + (includeCompleted ? "" : " AND completed = false");
         if (filtered) {
             conditions += (conditions.isEmpty() ? "" : " AND ")
                     + "title LIKE CONCAT('%', ?, '%') AND category = ?";
         }
-        assertEquals("SELECT id, user_id, title, detail, category, priority, due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at"
+        assertEquals("SELECT id, parent_id, user_id, title, detail, category, priority, due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at"
                 + " FROM todos" + (conditions.isEmpty() ? "" : " WHERE " + conditions)
                 + " ORDER BY due_date " + order.toUpperCase(java.util.Locale.ROOT),
                 sql.getSql().replaceAll("\\s+", " ").strip());
@@ -330,7 +330,7 @@ class TodoSearchTests {
         }
         String keyword = filtered ? "todo-" : "";
         String category = filtered ? "資格" : "";
-        String conditions = "user_id = ? AND deleted_at IS NULL" + (includeCompleted ? "" : " AND completed = false");
+        String conditions = "parent_id IS NULL AND user_id = ? AND deleted_at IS NULL" + (includeCompleted ? "" : " AND completed = false");
         if (filtered) {
             conditions += (conditions.isEmpty() ? "" : " AND ")
                     + "title LIKE CONCAT('%', ?, '%') AND category = ?";
@@ -353,7 +353,7 @@ class TodoSearchTests {
                     new Object[] { 1L, keyword, category, order, includeCompleted, 10, offset });
             BoundSql sql = configuration.getMappedStatement("com.example.todoapp.TodoMapper.searchPage")
                     .getBoundSql(parameters);
-            assertEquals("SELECT id, user_id, title, detail, category, priority, due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at"
+            assertEquals("SELECT (SELECT COUNT(*) FROM todos child WHERE child.parent_id = todos.id AND child.deleted_at IS NULL) AS total_subtask_count, (SELECT COUNT(*) FROM todos child WHERE child.parent_id = todos.id AND child.deleted_at IS NULL AND child.completed = true) AS done_subtask_count, id, parent_id, user_id, title, detail, category, priority, due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at"
                     + " FROM todos" + where + " ORDER BY pinned DESC, due_date " + order.toUpperCase(java.util.Locale.ROOT)
                     + ", id ASC LIMIT ? OFFSET ?",
                     sql.getSql().replaceAll("\\s+", " ").replace(" ,", ",").strip());

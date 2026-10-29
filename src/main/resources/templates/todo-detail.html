@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title th:text="${todo.title}">タスク詳細</title>
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body><main class="container">
+<nav th:replace="~{fragments/language :: language}"></nav>
+<h1 class="page-title" th:text="${todo.title}"></h1>
+<p th:text="${todo.detail}"></p>
+<p><a class="link" th:href="@{/todos}" th:text="#{subtask.back}">一覧へ</a>
+<a class="link" th:href="@{/todos/{id}/edit(id=${todo.id})}" th:text="#{todo.edit}">編集</a></p>
+<section th:unless="${todo.subtask}">
+<h2 th:text="#{subtask.heading}">サブタスク</h2>
+<p><span th:text="#{subtask.progress}">進捗</span> <span th:text="${todo.progress}">0</span>%
+(<span th:text="${todo.completedSubtaskCount}">0</span>/<span th:text="${#lists.size(todo.subtasks)}">0</span>)</p>
+<progress max="100" th:value="${todo.progress}" th:attr="aria-label=#{subtask.progress}" style="width:100%"></progress>
+<p th:if="${#lists.isEmpty(todo.subtasks)}" th:text="#{subtask.empty}">サブタスクはありません</p>
+<ul class="subtask-list">
+<li th:each="sub : ${todo.subtasks}" class="subtask-item">
+<form th:action="@{/todos/{pid}/subtasks/{sid}/toggle(pid=${todo.id},sid=${sub.id})}" method="post">
+<button type="submit" th:attr="aria-label=#{subtask.toggle},aria-pressed=${sub.completed}" th:text="${sub.completed ? '☑' : '☐'}"></button>
+</form>
+<span class="subtask-title" th:classappend="${sub.completed ? 'completed' : ''}" th:text="${sub.title}"></span>
+<form th:action="@{/todos/{pid}/subtasks/{sid}/delete(pid=${todo.id},sid=${sub.id})}" method="post">
+<button type="submit" th:text="#{subtask.delete}">削除</button>
+</form>
+</li></ul>
+<form class="subtask-add-form" th:action="@{/todos/{pid}/subtasks(pid=${todo.id})}" method="post">
+<label for="subtask-title" th:text="#{subtask.title}">タイトル</label>
+<input id="subtask-title" class="form-input" name="title" type="text" required maxlength="255" pattern=".*\S.*">
+<button class="btn btn-primary" type="submit" th:text="#{subtask.add}">追加</button>
+</form>
+</section>
+<a th:if="${todo.subtask}" th:href="@{/todos/{id}(id=${todo.parentId})}" th:text="#{subtask.parent}">親タスクへ</a>
+</main></body></html>

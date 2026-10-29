@@ -24,6 +24,10 @@ public interface TodoMapper {
             @Param("order") String order, @Param("includeCompleted") boolean includeCompleted);
 
     Todo findById(Long id);
+    List<Todo> findSubtasks(Long parentId);
+    Todo lockById(Long id);
+    void cascadeDelete(@Param("parentId") Long parentId, @Param("deletedAt") java.time.LocalDateTime deletedAt);
+    void cascadeRestore(@Param("parentId") Long parentId, @Param("deletedAt") java.time.LocalDateTime deletedAt);
 
     List<Todo> findByDeadline(@Param("date") LocalDate date);
 

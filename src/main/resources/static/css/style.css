@@ -333,3 +333,11 @@ body {
 .audit-diff pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; background: #111827; padding: 12px; border-radius: 6px; }
 .audit-note { color: #fde047; }
 @media (max-width: 700px) { .audit-diff { grid-template-columns: 1fr; } }
+
+.subtask-list { list-style:none; padding:0; }
+.subtask-item { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid #ddd; }
+.subtask-item form { margin:0; }
+.subtask-title { flex:1; overflow-wrap:anywhere; }
+.subtask-title.completed { text-decoration:line-through; color:#777; }
+.subtask-add-form { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:16px; }
+.subtask-add-form input { flex:1; min-width:120px; }

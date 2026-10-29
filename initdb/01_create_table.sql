@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS todos (
     id BIGINT NOT NULL AUTO_INCREMENT,
     user_id BIGINT NULL DEFAULT NULL,
+    parent_id BIGINT NULL,
+    deleted_with_parent BOOLEAN NOT NULL DEFAULT false,
     title VARCHAR(255) NOT NULL,
     detail VARCHAR(255) NULL DEFAULT NULL,
     category VARCHAR(255) NOT NULL,
@@ -24,6 +26,8 @@ CREATE TABLE IF NOT EXISTS todos (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
+    INDEX idx_todos_parent_id (parent_id),
+    CONSTRAINT fk_todos_parent FOREIGN KEY (parent_id) REFERENCES todos(id) ON DELETE CASCADE,
     CONSTRAINT fk_todos_user FOREIGN KEY (user_id) REFERENCES users(id)
 ) DEFAULT CHARACTER SET utf8mb4;
 

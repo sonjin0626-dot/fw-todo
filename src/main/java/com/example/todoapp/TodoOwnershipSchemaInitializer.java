@@ -35,6 +35,30 @@ public class TodoOwnershipSchemaInitializer implements InitializingBean {
             String catalog = connection.getCatalog();
             String schema = connection.getSchema();
             try (Statement statement = connection.createStatement()) {
+                String parentColumn = metadata.storesUpperCaseIdentifiers() ? "PARENT_ID" : "parent_id";
+                try (ResultSet columns = metadata.getColumns(catalog, schema, table, parentColumn)) {
+                    if (!columns.next()) statement.executeUpdate("ALTER TABLE todos ADD COLUMN parent_id BIGINT NULL");
+                }
+                String cascadeColumn = metadata.storesUpperCaseIdentifiers() ? "DELETED_WITH_PARENT" : "deleted_with_parent";
+                try (ResultSet columns = metadata.getColumns(catalog, schema, table, cascadeColumn)) {
+                    if (!columns.next()) statement.executeUpdate("ALTER TABLE todos ADD COLUMN deleted_with_parent BOOLEAN NOT NULL DEFAULT false");
+                }
+                boolean parentKey = false;
+                try (ResultSet keys = metadata.getImportedKeys(catalog, schema, table)) {
+                    while (keys.next()) {
+                        if ("parent_id".equalsIgnoreCase(keys.getString("FKCOLUMN_NAME"))) parentKey = true;
+                    }
+                }
+                if (!parentKey) {
+                    statement.executeUpdate("ALTER TABLE todos ADD CONSTRAINT fk_todos_parent FOREIGN KEY (parent_id) REFERENCES todos(id) ON DELETE CASCADE");
+                }
+                boolean parentIndex = false;
+                try (ResultSet indexes = metadata.getIndexInfo(catalog, schema, table, false, false)) {
+                    while (indexes.next()) {
+                        if ("parent_id".equalsIgnoreCase(indexes.getString("COLUMN_NAME"))) parentIndex = true;
+                    }
+                }
+                if (!parentIndex) statement.executeUpdate("CREATE INDEX idx_todos_parent_id ON todos(parent_id)");
                 String usersTable = metadata.storesUpperCaseIdentifiers() ? "USERS" : "users";
                 String emailColumn = metadata.storesUpperCaseIdentifiers() ? "EMAIL" : "email";
                 try (ResultSet columns = metadata.getColumns(catalog, schema, usersTable, emailColumn)) {

@@ -238,6 +238,7 @@ public class TodoService {
     @Auditable(action = AuditLog.Action.CREATE)
     public void create(Todo todo) {
         // 所有者はリクエストの値を信用せず、認証済みユーザーから設定する。
+        todo.setParentId(null);
         todo.setUserId(currentUserId());
         // 監査は操作の試行を記録する。作成前なので対象IDはまだない。
         auditService.log("CREATE_ATTEMPT", null, todo.getUserId());
@@ -269,11 +270,19 @@ public class TodoService {
         }
         // 管理者による編集でも、リクエスト値ではなく元の所有者を使用する。
         todo.setUserId(existing.getUserId());
+        todo.setParentId(existing.getParentId());
+        if (existing.getParentId() == null) {
+            List<Todo> children = todoMapper.findSubtasks(todo.getId());
+            if (!children.isEmpty()) todo.setCompleted(children.stream().allMatch(t -> Boolean.TRUE.equals(t.getCompleted())));
+        } else {
+            requireParent(existing.getParentId());
+        }
         Long actorId = currentUserId();
         auditService.log("UPDATE_ATTEMPT", todo.getId(), actorId);
         if (todoMapper.update(todo) > 0) {
             historyMapper.insert(todo.getId(), actorId, "UPDATE");
         }
+        if (existing.getParentId() != null) syncParent(existing.getParentId());
         log.info("編集 id={}", todo.getId());
     }
 
@@ -298,7 +307,9 @@ public class TodoService {
         auditService.log("DELETE_ATTEMPT", id, actorId);
         if (todoMapper.deleteById(userId, id) > 0) {
             historyMapper.insert(id, actorId, "DELETE");
+            todoMapper.cascadeDelete(id, todoMapper.findIncludingDeletedById(id).getDeletedAt());
         }
+        if (existing.getParentId() != null && todoMapper.findById(existing.getParentId()) != null) syncParent(existing.getParentId());
         log.info("削除 id={}", id);
     }
 
@@ -336,6 +347,12 @@ public class TodoService {
         // 削除前の有効な対象だけを記録する。後続のUPDATE失敗時には履歴も戻る。
         historyMapper.insertBulkDelete(userId, actorId, distinctIds);
         int deleted = todoMapper.bulkDeleteByIds(userId, distinctIds);
+        for (Long id : distinctIds) {
+            Todo removed = todoMapper.findIncludingDeletedById(id);
+            if (removed != null && removed.getDeletedAt() != null) {
+                todoMapper.cascadeDelete(id, removed.getDeletedAt());
+            }
+        }
         log.info("一括削除 件数={}", deleted);
         return deleted;
     }
@@ -352,10 +369,17 @@ public class TodoService {
     @Auditable(action = AuditLog.Action.RESTORE)
     public boolean restore(Long id) {
         Long userId = scopeUserId();
-        checkOwner(todoMapper.findIncludingDeletedById(id), userId);
+        Todo removed = todoMapper.findIncludingDeletedById(id);
+        checkOwner(removed, userId);
         Long actorId = currentUserId();
         auditService.log("RESTORE_ATTEMPT", id, actorId);
+
+        if (removed != null && removed.getParentId() != null) requireParent(removed.getParentId());
         boolean restored = todoMapper.restoreById(userId, id) > 0;
+        if (restored && removed != null) {
+            todoMapper.cascadeRestore(id, removed.getDeletedAt());
+            if (removed.getParentId() != null) syncParent(removed.getParentId());
+        }
         if (restored) {
             historyMapper.insert(id, actorId, "RESTORE");
             log.info("復元 id={}", id);
@@ -383,6 +407,67 @@ public class TodoService {
             log.info("印を切り替え id={}", id);
         }
         return toggled;
+    }
+
+    /** 所有者を確認して詳細画面用の子タスクをまとめて取得します。 */
+    public Todo findByIdWithSubtasks(Long id) {
+        Todo todo = findById(id);
+        if (todo == null) throw new TodoNotFoundException(id);
+        if (todo.getParentId() != null && findById(todo.getParentId()) == null) throw new TodoNotFoundException(id);
+        todo.setSubtasks(todoMapper.findSubtasks(id));
+        return todo;
+    }
+
+    private Todo requireParent(Long id) {
+        Todo parent = findById(id);
+        if (parent == null) throw new TodoNotFoundException(id);
+        if (parent.isSubtask()) throw new com.example.todoapp.exception.BusinessException("INVALID_PARENT", "サブタスクは1階層までです");
+        Todo locked = todoMapper.lockById(id);
+        if (locked == null) throw new TodoNotFoundException(id);
+        return locked;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void addSubtask(Long parentId, String title) {
+        Todo parent = requireParent(parentId);
+        if (title == null || title.isBlank() || title.length() > 255) {
+            throw new com.example.todoapp.exception.BusinessException("INVALID_TITLE", "タイトルは1〜255文字で入力してください");
+        }
+        Todo child = new Todo();
+        child.setParentId(parentId);
+        child.setUserId(parent.getUserId());
+        child.setTitle(title.strip());
+        child.setCategory(parent.getCategory());
+        child.setPriority(parent.getPriority());
+        child.setCompleted(false);
+        todoMapper.insert(child);
+        historyMapper.insert(child.getId(), currentUserId(), "CREATE");
+        syncParent(parentId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public void changeSubtask(Long parentId, Long subtaskId, boolean delete) {
+        requireParent(parentId);
+        Todo child = findById(subtaskId);
+        if (child == null || !parentId.equals(child.getParentId())) throw new TodoNotFoundException(subtaskId);
+        if (delete) {
+            todoMapper.deleteById(child.getUserId(), subtaskId);
+        } else {
+            child.setCompleted(!Boolean.TRUE.equals(child.getCompleted()));
+            todoMapper.update(child);
+        }
+        historyMapper.insert(subtaskId, currentUserId(), delete ? "DELETE" : "UPDATE");
+        syncParent(parentId);
+    }
+
+    private void syncParent(Long parentId) {
+        Todo parent = todoMapper.lockById(parentId);
+        List<Todo> children = todoMapper.findSubtasks(parentId);
+        boolean completed = !children.isEmpty() && children.stream().allMatch(t -> Boolean.TRUE.equals(t.getCompleted()));
+        if (Boolean.TRUE.equals(parent.getCompleted()) == completed) return;
+        parent.setCompleted(completed);
+        historyMapper.insert(parentId, currentUserId(), "UPDATE");
+        todoMapper.update(parent);
     }
 
     /**

@@ -32,6 +32,18 @@ public class Todo {
     private Long id;
     /** 所有者のユーザーID。登録・更新時にサービスが設定する。 */
     private Long userId;
+    private Long parentId;
+    private Integer totalSubtaskCount;
+    private Integer doneSubtaskCount;
+    public long getSubtaskCount() { return totalSubtaskCount == null ? subtasks.size() : totalSubtaskCount; }
+    private java.util.List<Todo> subtasks = new java.util.ArrayList<>();
+    public boolean isSubtask() { return parentId != null; }
+    public long getCompletedSubtaskCount() {
+        return doneSubtaskCount == null ? subtasks.stream().filter(t -> Boolean.TRUE.equals(t.getCompleted())).count() : doneSubtaskCount;
+    }
+    public int getProgress() {
+        return getSubtaskCount() == 0 ? 0 : (int) (getCompletedSubtaskCount() * 100 / getSubtaskCount());
+    }
 
     /** 必須のタイトル（255文字以内）。 */
     @NotBlank(message = "{validation.titleRequired}")

@@ -386,3 +386,20 @@ DBを使用する追加テストは`@Transactional`で各テスト後にロー�
 `mvnw.cmd` は通常のキャッシュパスを先に設定し、リンク先情報が存在する場合だけ参照するよう修正しています。`Get-Item` には `-LiteralPath` と `-Force` を指定しています。アプリのRUN起動やJavaコードのエラーではありません。Wrapperを再生成する際は、この修正が上書きされていないか確認してください。
 
 関連するApache側の報告：[maven-wrapper issue #395](https://github.com/apache/maven-wrapper/issues/395)。
+
+### サブタスク
+
+一覧のタイトルを押すと、タスク詳細（`/todos/{id}`）でサブタスクを追加・削除・完了切替できます。
+サブタスクは1階層までで、タイトルは必須・255文字以内です。所有者・ジャンル・優先度は親から引き継ぎます。
+一覧と詳細に進捗率を表示し、全件完了で親を自動完了、未完了の追加・切替で親を未完了に戻します。
+子が0件になったときの進捗は0%・親は未完了です。子がある親の完了状態は子の状態から決まります。
+
+親をゴミ箱に移すと有効な子も連動して移動します。親の復元では、一緒に削除された子だけ復元します。
+物理削除には自己参照外部キーの `ON DELETE CASCADE` を適用しています。
+既存DBには起動時に `parent_id`、復元管理用の `deleted_with_parent`、外部キー・インデックスを追加します。
+
+フォームのPOST先は次のとおりです（認証とCSRFトークンが必要）。
+
+- `/todos/{parentId}/subtasks`：追加（`title`）
+- `/todos/{parentId}/subtasks/{subtaskId}/toggle`：完了切替
+- `/todos/{parentId}/subtasks/{subtaskId}/delete`：削除

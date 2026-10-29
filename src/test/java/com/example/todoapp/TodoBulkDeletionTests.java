@@ -87,8 +87,8 @@ class TodoBulkDeletionTests {
         assertEquals("true", uri.getQueryParams().getFirst("includeCompleted"));
         assertEquals("2", uri.getQueryParams().getFirst("page"));
         assertTrue(java.net.URLDecoder.decode(redirect, StandardCharsets.UTF_8).contains("keyword=Java & 勉強"));
-        verify(mapper).findIncludingDeletedById(7L);
-        verify(mapper).findIncludingDeletedById(2147483648L);
+        verify(mapper, times(2)).findIncludingDeletedById(7L);
+        verify(mapper, times(2)).findIncludingDeletedById(2147483648L);
         verify(mapper).bulkDeleteByIds(null, List.of(7L, 2147483648L));
         verifyNoMoreInteractions(mapper);
     }
@@ -121,12 +121,12 @@ class TodoBulkDeletionTests {
         }
         var statement = configuration.getMappedStatement("com.example.todoapp.TodoMapper.bulkDeleteByIds");
         var selected = statement.getBoundSql(Map.of("ids", List.of(7L, 8L)));
-        assertEquals("UPDATE todos SET deleted_at = CURRENT_TIMESTAMP WHERE deleted_at IS NULL AND id IN ( ? , ? )",
+        assertEquals("UPDATE todos SET deleted_at = CURRENT_TIMESTAMP, deleted_with_parent = false WHERE deleted_at IS NULL AND id IN ( ? , ? )",
                 selected.getSql().replaceAll("\\s+", " ").strip());
         assertEquals(2, selected.getParameterMappings().size());
         for (Map<String, Object> parameters : List.<Map<String, Object>>of(Map.of("ids", List.of()), Map.of())) {
             var empty = statement.getBoundSql(parameters);
-            assertEquals("UPDATE todos SET deleted_at = CURRENT_TIMESTAMP WHERE deleted_at IS NULL AND 1 = 0",
+            assertEquals("UPDATE todos SET deleted_at = CURRENT_TIMESTAMP, deleted_with_parent = false WHERE deleted_at IS NULL AND 1 = 0",
                     empty.getSql().replaceAll("\\s+", " ").strip());
             assertEquals(0, empty.getParameterMappings().size());
         }

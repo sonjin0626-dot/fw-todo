@@ -95,7 +95,7 @@
                         </form>
                     </td>
                     <td sec:authorize="hasRole('ADMIN')" th:text="${todo.userId}"></td>
-                    <td th:text="${todo.title}"></td>
+                    <td><span th:if="${trashMode}" th:text="${todo.title}"></span><a th:unless="${trashMode}" th:href="@{/todos/{id}(id=${todo.id})}" th:text="${todo.title}"></a><div th:if="${!trashMode and todo.subtaskCount > 0}"><progress max="100" th:value="${todo.progress}" th:attr="aria-label=#{subtask.progress}"></progress> <span th:text="${todo.progress + '% (' + todo.completedSubtaskCount + '/' + todo.subtaskCount + ')'}"></span></div></td>
                     <td th:text="${#messages.msgOrNull('category.' + todo.category) ?: todo.category}"></td>
                     <td>
                         <span class="priority-mark" th:if="${todo.priority == 1}" aria-hidden="true">★</span>
