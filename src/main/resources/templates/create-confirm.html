@@ -27,6 +27,7 @@
             <p th:text="#{todo.dueDate}">期限</p>
             <p class="confirm-value"
                 th:text="${todo.dueDate == null ? #messages.msg('todo.emptyValue') : #temporals.format(todo.dueDate, 'yyyy-MM-dd')}"></p>
+            <div th:replace="~{fragments/tags :: confirm}"></div>
             <input type="hidden" th:field="*{title}">
             <input type="hidden" th:field="*{detail}">
             <input type="hidden" th:field="*{category}">

@@ -48,6 +48,9 @@ public class TodoService {
     /** 一覧とゴミ箱に表示する1ページあたりの件数。 */
     public static final int PAGE_SIZE = 10;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private TagService tagService;
+
     private final TodoMapper todoMapper;
     private final UserMapper userMapper;
     private final HistoryMapper historyMapper;
@@ -177,6 +180,7 @@ public class TodoService {
         if (todo == null) {
             checkOwner(todoMapper.findIncludingDeletedById(id), userId);
         }
+        if (todo != null && tagService != null) todo.setTagIds(tagService.findTagIds(todo.getId()));
         return todo;
     }
 
@@ -243,6 +247,7 @@ public class TodoService {
         // 監査は操作の試行を記録する。作成前なので対象IDはまだない。
         auditService.log("CREATE_ATTEMPT", null, todo.getUserId());
         todoMapper.insert(todo);
+        if (tagService != null) tagService.save(todo.getId(), todo.getTagIds());
         historyMapper.insert(todo.getId(), todo.getUserId(), "CREATE");
         events.publishEvent(new TodoCreatedEvent(todo.getId(), todo.getUserId()));
         log.info("登録 id={}", todo.getId());
@@ -283,6 +288,7 @@ public class TodoService {
             historyMapper.insert(todo.getId(), actorId, "UPDATE");
         }
         if (existing.getParentId() != null) syncParent(existing.getParentId());
+        if (existing.getDeletedAt() == null && tagService != null) tagService.save(todo.getId(), todo.getTagIds());
         log.info("編集 id={}", todo.getId());
     }
 

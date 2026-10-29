@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"><body>
+<div th:fragment="tagEditor" class="form-row">
+    <label class="form-label" for="tagInput" th:text="#{tag.label}">タグ</label>
+    <div class="tag-input-wrapper" th:attr="data-search-url=@{/api/tags/search},data-remove-label=#{tag.remove},data-error-label=#{tag.error}">
+        <input type="hidden" name="_tagIds" value="on">
+        <div id="selectedTags" class="selected-tags">
+            <span class="tag-chip" th:each="tag : ${@tagService.resolve(todo.tagIds)}" th:attr="data-id=${tag.id}">
+                <span th:text="${tag.name}"></span>
+                <button type="button" class="remove-tag" th:attr="aria-label=#{tag.remove}">×</button>
+                <input type="hidden" name="tagIds" th:value="${tag.id}">
+            </span>
+        </div>
+        <input class="form-input" id="tagInput" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="tagDropdown" aria-describedby="tagStatus" th:placeholder="#{tag.placeholder}">
+        <div id="tagDropdown" class="tag-dropdown" role="listbox" hidden></div>
+        <p id="tagStatus" role="status" th:text="#{tag.hint}"></p>
+    </div>
+    <script th:src="@{/js/tag-autocomplete.js}" defer></script>
+</div>
+<div th:fragment="confirm">
+    <p th:text="#{tag.label}">タグ</p>
+    <input type="hidden" name="_tagIds" value="on">
+    <span class="tag-chip" th:each="tag : ${@tagService.resolve(todo.tagIds)}">
+        <span th:text="${tag.name}"></span>
+        <input type="hidden" name="tagIds" th:value="${tag.id}">
+    </span>
+</div>
+</body></html>

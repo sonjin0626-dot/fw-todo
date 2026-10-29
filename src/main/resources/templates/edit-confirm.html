@@ -24,6 +24,7 @@
             <p class="confirm-value" th:text="${todo.dueDate == null ? #messages.msg('todo.emptyValue') : #temporals.format(todo.dueDate, 'yyyy-MM-dd')}"></p>
             <p th:text="#{todo.completed}">完了</p>
             <p class="confirm-value" th:text="${todo.completed == null ? #messages.msg('todo.emptyValue') : (todo.completed ? #messages.msg('todo.completed') : #messages.msg('todo.incomplete'))}"></p>
+            <div th:replace="~{fragments/tags :: confirm}"></div>
             <input type="hidden" th:field="*{title}">
             <input type="hidden" th:field="*{detail}">
             <input type="hidden" th:field="*{category}">

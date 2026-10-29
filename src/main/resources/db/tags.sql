@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS tags (
+    id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS todo_tags (
+    todo_id BIGINT NOT NULL,
+    tag_id BIGINT NOT NULL,
+    PRIMARY KEY (todo_id, tag_id),
+    FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE,
+    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
+INSERT INTO tags (name) SELECT 'Java' WHERE NOT EXISTS (SELECT 1 FROM tags WHERE name = 'Java');
+INSERT INTO tags (name) SELECT 'Spring Boot' WHERE NOT EXISTS (SELECT 1 FROM tags WHERE name = 'Spring Boot');
+INSERT INTO tags (name) SELECT 'MyBatis' WHERE NOT EXISTS (SELECT 1 FROM tags WHERE name = 'MyBatis');
+INSERT INTO tags (name) SELECT 'MySQL' WHERE NOT EXISTS (SELECT 1 FROM tags WHERE name = 'MySQL');

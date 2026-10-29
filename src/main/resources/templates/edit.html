@@ -55,6 +55,7 @@
                 <label class="form-label" for="completed" th:text="#{todo.completed}">完了</label>
                 <input type="checkbox" id="completed" th:field="*{completed}">
             </div>
+            <div th:replace="~{fragments/tags :: tagEditor}"></div>
             <button class="btn" type="submit" th:text="#{common.confirm}">確認する</button>
             <a class="btn sub" th:href="@{/todos}" th:text="#{todo.back}">一覧へ</a>
             <a class="btn sub" th:href="@{/todos/{id}/attach(id=${id})}" th:text="#{attachment.title}">添付ファイル</a>

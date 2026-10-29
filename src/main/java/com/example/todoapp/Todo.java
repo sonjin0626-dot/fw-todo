@@ -30,6 +30,7 @@ public class Todo {
 
     /** ToDoのID。新規入力時は{@code null}で、登録時にDBが採番する。 */
     private Long id;
+    private java.util.List<Long> tagIds;
     /** 所有者のユーザーID。登録・更新時にサービスが設定する。 */
     private Long userId;
     private Long parentId;
