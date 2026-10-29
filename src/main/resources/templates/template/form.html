@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{template.form}">テンプレート登録・編集</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<main class="container">
+    <nav th:replace="~{fragments/language :: language}"></nav>
+    <nav th:replace="~{fragments/account :: account}"></nav>
+    <h1 class="page-title" th:text="#{template.form}">テンプレート登録・編集</h1>
+    <form th:action="${templateId == null} ? @{/templates} : @{/templates/{id}(id=${templateId})}" th:object="${templateForm}" method="post">
+        <div class="template-errors" role="alert" th:if="${#fields.hasAnyErrors()}">
+            <p th:each="err : ${#fields.allErrors()}" th:text="${err}"></p>
+        </div>
+        <p><label for="template-name" th:text="#{template.name}">テンプレート名</label>
+            <input class="form-input" id="template-name" th:field="*{name}" required maxlength="100"></p>
+        <p><label for="template-description" th:text="#{template.description}">説明</label>
+            <textarea class="form-input" id="template-description" th:field="*{description}" maxlength="500" rows="3"></textarea></p>
+        <h2 th:text="#{template.items}">タスク項目</h2>
+        <p th:text="#{template.itemsHelp}">1〜100件、各200文字以内で入力してください。</p>
+        <div id="template-items">
+            <div class="template-item-row" th:each="title : *{itemTitles}">
+                <label><span th:text="#{todo.title}">やること</span><input class="form-input" type="text" name="itemTitles" th:value="${title}" required maxlength="200"></label>
+                <button class="btn sub remove-template-item" type="button" th:text="#{template.removeItem}">項目を削除</button>
+            </div>
+        </div>
+        <template id="template-item-prototype">
+            <div class="template-item-row">
+                <label><span th:text="#{todo.title}">やること</span><input class="form-input" type="text" name="itemTitles" required maxlength="200"></label>
+                <button class="btn sub remove-template-item" type="button" th:text="#{template.removeItem}">項目を削除</button>
+            </div>
+        </template>
+        <p class="template-card-actions">
+            <button class="btn sub" id="add-template-item" type="button" th:text="#{template.addItem}">項目を追加</button>
+            <button class="btn" type="submit" th:text="#{template.save}">保存</button>
+            <a class="link" th:href="@{/templates}" th:text="#{template.list}">テンプレート一覧</a>
+        </p>
+    </form>
+</main>
+<script th:src="@{/js/templates.js}"></script>
+</body>
+</html>

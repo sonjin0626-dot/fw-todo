@@ -341,3 +341,16 @@ body {
 .subtask-title.completed { text-decoration:line-through; color:#777; }
 .subtask-add-form { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:16px; }
 .subtask-add-form input { flex:1; min-width:120px; }
+.template-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 20px; }
+.template-card { padding: 20px; border: 1px solid #475569; border-radius: 12px; background: #1e293b; min-width: 0; }
+.template-card-header, .template-card-actions, .template-item-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.template-card-header { justify-content: space-between; }
+.template-card h2 { font-size: 1.2rem; overflow-wrap: anywhere; }
+.template-badge { background: #e8efff; color: #234a85; padding: 4px 10px; border-radius: 20px; white-space: nowrap; }
+.template-desc, .template-items-preview { white-space: pre-wrap; overflow-wrap: anywhere; }
+.template-items-preview { max-height: 220px; overflow-y: auto; }
+.template-apply { display: grid; gap: 12px; margin: 16px 0; }
+.template-apply label, .template-item-row label { display: grid; gap: 4px; }
+.template-item-row { margin-bottom: 12px; }
+.template-item-row label { flex: 1; min-width: min(100%, 200px); }
+.template-errors { color: #fca5a5; }

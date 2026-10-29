@@ -70,3 +70,20 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     INDEX idx_audit_created (created_at, id),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) DEFAULT CHARACTER SET utf8mb4;
+CREATE TABLE IF NOT EXISTS todo_template (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description VARCHAR(500),
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) DEFAULT CHARACTER SET utf8mb4;
+
+CREATE TABLE IF NOT EXISTS todo_template_item (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    template_id BIGINT NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    description VARCHAR(255),
+    display_order INT NOT NULL DEFAULT 0,
+    FOREIGN KEY (template_id) REFERENCES todo_template(id) ON DELETE CASCADE
+) DEFAULT CHARACTER SET utf8mb4;

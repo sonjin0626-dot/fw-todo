@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.todoapp.TodoTemplateMapper">
+    <resultMap id="templateWithItems" type="com.example.todoapp.TodoTemplate">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="userId" column="user_id"/>
+        <result property="createdAt" column="created_at"/>
+        <collection property="items" column="id" select="com.example.todoapp.TodoTemplateItemMapper.findByTemplateId"/>
+    </resultMap>
+    <select id="findByUserId" resultMap="templateWithItems">
+        SELECT * FROM todo_template WHERE user_id = #{userId} ORDER BY created_at DESC, id DESC
+    </select>
+    <select id="findById" resultMap="templateWithItems">
+        SELECT * FROM todo_template WHERE id = #{id} FOR UPDATE
+    </select>
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO todo_template (name, description, user_id) VALUES (#{name}, #{description}, #{userId})
+    </insert>
+    <update id="update">
+        UPDATE todo_template SET name = #{name}, description = #{description} WHERE id = #{id} AND user_id = #{userId}
+    </update>
+    <delete id="deleteById">DELETE FROM todo_template WHERE id = #{id}</delete>
+</mapper>

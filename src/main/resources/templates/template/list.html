@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{template.list}">テンプレート一覧</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<main class="container">
+    <nav th:replace="~{fragments/language :: language}"></nav>
+    <nav th:replace="~{fragments/account :: account}"></nav>
+    <h1 class="page-title" th:text="#{template.list}">テンプレート一覧</h1>
+    <p class="flash" role="status" th:if="${message != null}" th:text="${message}"></p>
+    <p><a class="btn" th:href="@{/templates/new}" th:text="#{template.new}">新規テンプレート作成</a></p>
+    <p th:if="${#lists.isEmpty(templates)}" th:text="#{template.empty}">テンプレートはありません。</p>
+    <div class="template-grid">
+        <article class="template-card" th:each="tpl : ${templates}">
+            <header class="template-card-header">
+                <h2 th:text="${tpl.name}"></h2>
+                <span class="template-badge" th:text="#{template.count(${#lists.size(tpl.items)})}"></span>
+            </header>
+            <p class="template-desc" th:text="${tpl.description}"></p>
+            <ol class="template-items-preview"><li th:each="item : ${tpl.items}" th:text="${item.title}"></li></ol>
+            <form th:action="@{/templates/{id}/apply(id=${tpl.id})}" method="post" class="template-apply">
+                <label><span th:text="#{todo.category}">ジャンル</span>
+                    <select class="form-input" name="category" required>
+                        <option value="デザイン" th:text="#{category.design}"></option>
+                        <option value="マーケティング" th:text="#{category.marketing}"></option>
+                        <option value="プログラミング" th:text="#{category.programming}"></option>
+                        <option value="資格" selected th:text="#{category.certification}"></option>
+                        <option value="就職活動" th:text="#{category.jobHunting}"></option>
+                    </select>
+                </label>
+                <label><span th:text="#{todo.priority}">優先度</span>
+                    <select class="form-input" name="priority"><option value="1" th:text="#{template.high}"></option><option value="2" selected th:text="#{template.medium}"></option><option value="3" th:text="#{template.low}"></option></select>
+                </label>
+                <label><span th:text="#{todo.dueDate}">期限</span><input class="form-input" type="date" name="dueDate"></label>
+                <button class="btn" type="submit" th:text="#{template.apply}">タスク作成</button>
+            </form>
+            <div class="template-card-actions">
+                <a class="btn sub" th:href="@{/templates/{id}/edit(id=${tpl.id})}" th:text="#{template.edit}">編集</a>
+                <form th:action="@{/templates/{id}/delete(id=${tpl.id})}" method="post" class="template-delete" th:attr="data-confirm=#{template.confirmDelete}">
+                    <button class="btn" type="submit" th:text="#{template.delete}">削除</button>
+                </form>
+            </div>
+        </article>
+    </div>
+</main>
+<script th:src="@{/js/templates.js}"></script>
+</body>
+</html>
