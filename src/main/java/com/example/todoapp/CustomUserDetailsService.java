@@ -13,6 +13,16 @@ public class CustomUserDetailsService implements UserDetailsService {
         this.userMapper = userMapper;
     }
 
+    /**
+     * DBのユーザー名からログイン用の認証情報を取得します。{@inheritDoc}
+     *
+     * <p>DBのアカウントを読み込み、アカウントID・有効状態・ロールを持つ
+     * {@link AccountPrincipal}へ変換します。</p>
+     *
+     * @param username 検索するユーザー名（{@code null}不可）
+     * @return アカウントIDを保持する認証情報
+     * @throws UsernameNotFoundException ユーザー名に一致するアカウントが存在しない場合
+     */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         User user = userMapper.findByUsername(username);

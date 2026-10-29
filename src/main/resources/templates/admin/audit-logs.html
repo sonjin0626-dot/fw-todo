@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{audit.title}">監査ログ</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body><main class="container audit-container">
+    <nav th:replace="~{fragments/language :: language}"></nav>
+    <nav th:replace="~{fragments/account :: account}"></nav>
+    <h1 th:text="${entityHistory == true ? #messages.msg('audit.history') : #messages.msg('audit.title')}">監査ログ</h1>
+    <p th:text="#{audit.explanation}"></p>
+    <form method="get" th:action="@{/admin/audit-logs}" th:object="${criteria}" class="audit-filters">
+        <p class="error audit-filter-error" role="alert" th:if="${#fields.hasAnyErrors()}" th:text="#{audit.invalid}"></p>
+        <label><span th:text="#{audit.entityType}"></span>
+            <select class="form-input" th:field="*{entityType}"><option value="" th:text="#{audit.all}"></option><option value="TODO">TODO</option></select>
+        </label>
+        <label><span th:text="#{audit.entityId}"></span><input class="form-input" type="number" min="1" th:field="*{entityId}"></label>
+        <label><span th:text="#{audit.userId}"></span><input class="form-input" type="number" min="1" th:field="*{userId}"></label>
+        <label><span th:text="#{audit.action}"></span>
+            <select class="form-input" th:field="*{action}"><option value="" th:text="#{audit.all}"></option>
+                <option th:each="action : ${actions}" th:value="${action.name()}" th:text="${#messages.msg('audit.action.' + action.name())}"></option>
+            </select>
+        </label>
+        <label><span th:text="#{audit.outcome}"></span>
+            <select class="form-input" th:field="*{outcome}"><option value="" th:text="#{audit.all}"></option>
+                <option th:each="outcome : ${outcomes}" th:value="${outcome}" th:text="${#messages.msg('audit.outcome.' + outcome)}"></option>
+            </select>
+        </label>
+        <label><span th:text="#{audit.from}"></span><input class="form-input" type="date" th:field="*{fromDate}"></label>
+        <label><span th:text="#{audit.to}"></span><input class="form-input" type="date" th:field="*{toDate}"></label>
+        <div class="user-actions"><button class="btn" type="submit" th:text="#{audit.search}"></button>
+            <a class="link" th:href="@{/admin/audit-logs}" th:text="#{audit.reset}"></a></div>
+    </form>
+    <p th:text="#{audit.total(${total})}"></p>
+    <p th:if="${#lists.isEmpty(logs)}" th:text="#{audit.empty}"></p>
+    <div class="attachment-table-wrapper" th:unless="${#lists.isEmpty(logs)}">
+        <table class="todo-table audit-table">
+            <thead><tr><th th:text="#{audit.date}"></th><th th:text="#{audit.action}"></th><th th:text="#{audit.outcome}"></th>
+                <th th:text="#{audit.target}"></th><th th:text="#{auth.username}"></th><th th:text="#{common.detail}"></th></tr></thead>
+            <tbody><tr th:each="log : ${logs}">
+                <td><time th:text="${#temporals.format(log.createdAt, 'yyyy/MM/dd HH:mm:ss')}"></time><br><small th:text="'ID: ' + ${log.id}"></small></td>
+                <td th:text="${#messages.msg('audit.action.' + log.operation)}"></td>
+                <td><span class="audit-outcome" th:text="${#messages.msg('audit.outcome.' + log.outcome)}"></span></td>
+                <td><a class="link" th:if="${log.entityId != null}" th:href="@{/admin/audit-logs/entity/{type}/{id}(type=${log.entityType},id=${log.entityId})}"
+                        th:text="${log.entityType + ' #' + log.entityId}"></a>
+                    <span th:if="${log.entityId == null}" th:text="${log.entityType}"></span></td>
+                <td><span th:text="${log.username != null ? log.username : '—'}"></span><br><small th:text="'ID: ' + ${log.userId}"></small></td>
+                <td><details class="audit-detail"><summary th:text="#{common.detail}"></summary>
+                    <dl><dt th:text="#{audit.ip}"></dt><dd th:text="${log.ipAddress != null ? log.ipAddress : '—'}"></dd>
+                        <dt>User-Agent</dt><dd th:text="${log.userAgent != null ? log.userAgent : '—'}"></dd></dl>
+                    <p class="audit-note" th:if="${log.outcome != 'COMMITTED' and log.outcome != 'NO_CHANGE'}" th:text="#{audit.uncommitted}"></p>
+                    <div class="audit-diff">
+                        <section><h3 th:text="#{audit.before}"></h3><pre th:text="${log.oldValue != null ? log.oldValue : #messages.msg('audit.noSnapshot')}"></pre></section>
+                        <section><h3 th:text="#{audit.after}"></h3><pre th:text="${log.newValue != null ? log.newValue : #messages.msg('audit.noSnapshot')}"></pre></section>
+                    </div>
+                </details></td>
+            </tr></tbody>
+        </table>
+    </div>
+    <nav class="user-actions" th:attr="aria-label=#{audit.pages}" th:if="${criteria.page > 0 or hasNext}">
+        <a class="link" th:if="${criteria.page > 0}" th:text="#{audit.previous}"
+           th:href="@{/admin/audit-logs(entityType=${criteria.entityType},entityId=${criteria.entityId},userId=${criteria.userId},action=${criteria.action},outcome=${criteria.outcome},fromDate=${criteria.fromDate},toDate=${criteria.toDate},page=${criteria.page - 1})}"></a>
+        <span th:text="#{audit.page(${criteria.page + 1})}"></span>
+        <a class="link" th:if="${hasNext}" th:text="#{audit.next}"
+           th:href="@{/admin/audit-logs(entityType=${criteria.entityType},entityId=${criteria.entityId},userId=${criteria.userId},action=${criteria.action},outcome=${criteria.outcome},fromDate=${criteria.fromDate},toDate=${criteria.toDate},page=${criteria.page + 1})}"></a>
+    </nav>
+</main></body></html>

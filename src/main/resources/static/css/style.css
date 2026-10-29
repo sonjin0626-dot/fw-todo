@@ -320,3 +320,16 @@ body {
     font-weight: bold;
     text-decoration: underline;
 }
+
+.audit-container { max-width: 1440px; }
+.audit-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin: 24px 0; align-items: end; }
+.audit-filters label { display: grid; gap: 8px; min-width: 0; }
+.audit-filter-error { grid-column: 1 / -1; }
+.audit-table { min-width: 850px; }
+.audit-table td { vertical-align: top; }
+.audit-detail summary { cursor: pointer; color: #93c5fd; }
+.audit-detail dd { margin: 4px 0 12px; overflow-wrap: anywhere; }
+.audit-diff { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.audit-diff pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; background: #111827; padding: 12px; border-radius: 6px; }
+.audit-note { color: #fde047; }
+@media (max-width: 700px) { .audit-diff { grid-template-columns: 1fr; } }

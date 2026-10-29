@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.todoapp.AuditMapper">
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO audit_logs
+            (action, todo_id, actor_user_id, entity_type, entity_id, user_id, username,
+             old_value, new_value, ip_address, user_agent, outcome)
+        VALUES
+            (#{action}, #{entityId}, #{userId}, #{entityType}, #{entityId}, #{userId}, #{username},
+             #{oldValue}, #{newValue}, #{ipAddress}, #{userAgent}, #{outcome})
+    </insert>
+    <update id="complete">
+        UPDATE audit_logs SET entity_id = #{entityId}, new_value = #{newValue}, outcome = #{outcome}
+        WHERE id = #{id}
+    </update>
+    <sql id="filters">
+        <where>
+            <if test="entityType != null and entityType != ''">AND entity_type = #{entityType}</if>
+            <if test="entityId != null">AND entity_id = #{entityId}</if>
+            <if test="userId != null">AND user_id = #{userId}</if>
+            <if test="action != null and action != ''">AND (action = #{action} OR action = CONCAT(#{action}, '_ATTEMPT'))</if>
+            <if test="outcome != null and outcome != ''">AND outcome = #{outcome}</if>
+            <if test="fromDate != null">AND created_at &gt;= #{fromTime}</if>
+            <if test="toDate != null">AND created_at &lt; #{untilTime}</if>
+        </where>
+    </sql>
+    <select id="search" resultType="com.example.todoapp.AuditLog">
+        SELECT id, action, entity_type, entity_id, user_id, username,
+               old_value, new_value, ip_address, user_agent, outcome, created_at
+        FROM audit_logs
+        <include refid="filters"/>
+        ORDER BY created_at DESC, id DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM audit_logs <include refid="filters"/>
+    </select>
+</mapper>

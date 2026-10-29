@@ -6,6 +6,7 @@
         <a class="link" th:href="@{/todos}" th:text="#{todo.nav}">ToDo一覧</a>
         <a class="link" th:href="@{/dashboard}" th:text="#{dashboard.title}">ToDo集計</a>
         <a class="link" sec:authorize="hasRole('ADMIN')" th:href="@{/admin/users}" th:text="#{admin.users}">ユーザー管理</a>
+        <a class="link" sec:authorize="hasRole('ADMIN')" th:href="@{/admin/audit-logs}" th:text="#{audit.title}">監査ログ</a>
         <span sec:authorize="hasRole('ADMIN')" th:text="#{admin.administrator}">管理者</span>
         <form th:action="@{/logout}" method="post">
             <button class="btn sub" type="submit" th:text="#{auth.logout}">ログアウト</button>

@@ -28,7 +28,9 @@ public class LoggingAspect {
 
     // serviceパッケージではなく、既存の@Serviceクラスを対象にする。
     @Pointcut("@within(org.springframework.stereotype.Service) && execution(public * com.example.todoapp..*(..))"
-            + " && !within(com.example.todoapp.MailService)")
+            + " && !within(com.example.todoapp.MailService)"
+            + " && !within(com.example.todoapp.AuditService)"
+            + " && !within(com.example.todoapp.AuditLogService)")
     public void serviceLayer() {
     }
 

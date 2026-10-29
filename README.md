@@ -176,9 +176,9 @@ Spring AOPはSpringから注入されたBeanへの呼び出しに作用します
 
 操作履歴の種別は `CREATE`、`UPDATE`、`DELETE`、`BULK_DELETE`、`RESTORE`、`TOGGLE_PIN` です。完了状態の変更は既存の編集処理を経由するため `UPDATE` として記録します。管理者が他人のToDoを操作した場合も、`actor_user_id` には操作した管理者のIDを保存します。復元や印の切替で更新対象がなかった場合は履歴を増やしません。一括削除では、重複ID・存在しないID・削除済みの行を履歴の対象から除外します。一括削除は全体を一つのトランザクションとして扱い、失敗を握りつぶして続行しません。
 
-監査ログの種別は各操作名に `_ATTEMPT` を付けた値です。認可・入力検査を通った操作について、DBの変更に先立って記録します。監査ログは成功を表すものではなく、本体の保存失敗や更新対象なしの場合にも残ります。作成前はIDが未発行なので、`CREATE_ATTEMPT` の `todo_id` はNULLです。監査ログ自体の保存に失敗した場合は例外を伝播し、本体の変更も確定しません。
+監査ログの種別は各操作名に `_ATTEMPT` を付けた値です。認可・入力検査を通った操作について、DBの変更に先立って記録します。本体の保存失敗や更新対象なしの場合にも残ります。作成前はIDが未発行なので、`CREATE_ATTEMPT` の従来列 `todo_id` はNULLです。新しい `entity_id` はAOPが作成後のIDを補完します。監査ログ自体の初回保存に失敗した場合は例外を伝播し、本体の変更も確定しません。操作の確定結果は後述する `outcome` で判定します。
 
-履歴・監査のID列には外部キーを設けていません。管理者によるユーザー・関連ToDoの物理削除後も記録を保持し、独立した監査トランザクションが未コミットの行を参照して待機することを防ぎます。タイトル・メモ・パスワードはこれらのテーブルに保存しません。
+履歴・監査のID列には外部キーを設けていません。管理者によるユーザー・関連ToDoの物理削除後も記録を保持し、独立した監査トランザクションが未コミットの行を参照して待機することを防ぎます。`todo_history` はID・操作のみを保存します。新しい監査ログには変更前後のタイトル・メモを含むToDoのJSONを保存します。パスワード・認証情報は保存しません。
 
 `rollbackFor = Exception.class` によりチェック例外もロールバック対象です。既存の `BusinessException` は不正な操作を拒否するために使われているので、教材の警告用 `noRollbackFor = BusinessException.class` は適用していません。業務エラー時も変更を戻す動作を維持します。将来「警告が出ても変更を確定する」業務を追加する際は、その警告専用の例外型に限定して `noRollbackFor` を設定してください。
 
@@ -192,6 +192,36 @@ FROM todo_history ORDER BY id DESC LIMIT 50;
 
 SELECT id, todo_id, actor_user_id, action, created_at
 FROM audit_logs ORDER BY id DESC LIMIT 50;
+```
+
+## 監査ログの検索・変更履歴
+
+管理者でログインし、画面上部の「監査ログ」（`GET /admin/audit-logs`）を開きます。対象種別・対象ID・操作者ID・操作・結果・開始日・終了日で検索でき、1ページ20件を新しい順に表示します。終了日はその日の23:59:59までを含み、同時刻のログはIDの降順で安定して並びます。検索条件はページ送りでも引き継ぎます。入力不正は説明付きのHTTP 400です。
+
+「詳細」で変更前・処理後のJSON、IPアドレス、User-Agentを開けます。対象ID、またはToDo編集画面の「変更履歴」から `/admin/audit-logs/entity/TODO/{id}` へ進めます。削除・ユーザー名変更後も、記録時点のユーザー名と履歴を表示します。画面と読み取りServiceを `@PreAuthorize("hasRole('ADMIN')")` で制限し、HTTPレスポンスに `Cache-Control: no-store` を付けています。JSONはHTMLエスケープして表示します。日本語・英語に対応します。
+
+教材の構成を既存のSpring Boot 4 / Java 21、Long型ID、`TodoService` のvoidの戻り値、論理削除に合わせています。既存の `AuditService` / `AuditMapper` / `audit_logs` を拡張し、追加の依存関係はありません。JSONにはBoot 4が標準採用するJackson 3の `JsonMapper` を使用します（[Spring公式](https://docs.spring.io/spring-boot/4.0/reference/features/json.html)）。
+
+- `@Auditable` / `AuditAspect`：作成・編集・削除・一括削除・復元・印の切替の前後で、DB上の実際のToDoをJSONに変換します。削除は論理削除なので、処理後にも `deletedAt` を含むスナップショットがあります。一括削除は重複を除いた対象ごとに記録します。
+- `AuditService.log`：従来の認可済み位置で独立した試行ログを保存します。AOPはそのログを同じ呼び出しのスナップショットに関連付けます。認可失敗や一括削除の入力検査失敗ではログを作成しません。新しい監査対象を増やす場合も、アノテーションと認可後の試行記録を組み合わせてください。
+- `AuditContext`：呼び出し単位の情報を保持し、例外時を含めて `finally` 相当の処理でスレッドから除去します。別スレッドへは渡しません。
+- `AuditService.complete`：本体のトランザクション終了後に、別の `REQUIRES_NEW` でID・処理後の値・結果を補完します。外側のトランザクションに参加した場合も、その終了まで確定扱いにしません。結果補完に失敗した場合は初回の試行ログが残り、サーバーログに監査IDを記録します。
+
+`outcome` は `COMMITTED`（確定）、`ROLLED_BACK`（ロールバック）、`NO_CHANGE`（変更なし）、`ATTEMPTED`（試行・結果未記録）、`FAILED`、`UNKNOWN`、`LEGACY`（拡張前の試行）です。`action` の `_ATTEMPT` は既存仕様として保持し、画面の操作名はCREATE等に読み替えます。ロールバック時の処理後JSONは確定したDB状態を表さないため、画面に説明を表示します。プロセス停止や結果保存失敗では `ATTEMPTED` のまま残る場合があります。
+
+認可のアドバイス（順序200）、`AuditConfiguration` のトランザクション設定（`@EnableTransactionManagement(order = 250)`）、監査AOP（順序300）の順に内側へ実行し、監査用の読み取りを本体のトランザクション内で行います。専用の設定クラスにすることで、DBを使用しないMVCスライステストへトランザクション設定が混入しません。ユーザーID・所有者は既存Serviceの検査を使います。IPは `getRemoteAddr()` を使い、クライアントが送信した転送ヘッダーを直接信用しません。信頼するプロキシがある場合はサーバー側で設定してください。User-Agentは500文字まで保存します。
+
+再起動時に `AuditSchemaInitializer` が既存の `audit_logs` へ列・索引を追加します。従来の `todo_id` / `actor_user_id` を残し、既存ログの `entity_id` / `user_id` を補完します。過去のJSON・ユーザー名・結果を推測して作成することはありません。DBの削除・ボリュームの再作成は不要です。ログにはToDo本文と接続情報が残るため、閲覧は管理者に限定しています。
+
+```sql
+SELECT id, action, entity_type, entity_id, user_id, username, outcome, created_at
+FROM audit_logs ORDER BY created_at DESC, id DESC LIMIT 50;
+```
+
+`AuditLogIntegrationTests` は実際のAOP・DB・Thymeleafで、変更前後、作成ID、接続情報、ロールバック、検索・日付終端・ページ送り、権限制御、HTMLエスケープ、日英表示を検証します。`AuditSchemaInitializerTests` は既存ログの保持と移行の再実行を検証します。
+
+```powershell
+.\mvnw.cmd "-Dtest=AuditLogIntegrationTests,AuditSchemaInitializerTests,TransactionManagementIntegrationTests" test
 ```
 
 ## ファイル添付
@@ -292,6 +322,32 @@ SMTPの接続・読込・書込タイムアウトはそれぞれ5秒です。`Ma
 ```powershell
 .\mvnw.cmd "-Dtest=MailServiceTests,MailNotificationIntegrationTests,TodoOwnershipSchemaInitializerTests" test
 ```
+
+## Javadoc
+
+教材のJavadoc設定を既存のSpring Boot 4 / Java 21構成に合わせています。
+`maven-javadoc-plugin` 3.6.0で、ソース・生成HTML・文字セットをUTF-8、ロケールを`ja_JP`に設定しています。
+Lombokを使うモデルのフィールド説明やサービスの補助メソッドも読めるよう、`show=private`で生成します。
+JDK付属の`javadoc`を使用するため、Java 21のJDKで実行してください。
+
+```powershell
+.\mvnw.cmd javadoc:javadoc
+Start-Process .\target\site\apidocs\index.html
+```
+
+出力先は`target/site/apidocs/index.html`です。`package`実行時にも`prepare-package`フェーズで自動生成します。
+生成HTMLは`target/`配下に置き、Gitへは追加しません。
+
+| 教材の対象 | このプロジェクトの対象・記述内容 |
+| --- | --- |
+| `TodoService` | 全メソッドに引数・戻り値・実際の例外条件を記述。`findById`は対象なしで`null`を返す既存仕様を明記 |
+| `TodoController` | `HomeController`の全エンドポイントにHTTPメソッド・パス・画面遷移を記述。`api/TodoApiController`にはJSON・CSVと応答ステータスを記述 |
+| `Todo` / `TodoForm` | 画面フォームを兼ねる`Todo`と、REST入力用の`api/TodoRequest`に項目・検証制約・変換処理を記述 |
+| パッケージの概要 | 既存の5パッケージに`package-info.java`を追加し、主要クラスを`{@link}`で参照 |
+
+主要クラスに`@author`・`@version`・`@since`・`@see`を付け、コード例と値には`{@code}`を使用しています。
+`CustomUserDetailsService.loadUserByUsername`は`{@inheritDoc}`でインターフェースの説明を継承し、DBからの取得仕様を補足しています。
+コメントを更新したら同じコマンドで再生成してください。JavadocはJavaコードの開発者向け資料です。
 
 ## テスト
 

@@ -11,6 +11,9 @@
         <nav th:replace="~{fragments/language :: language}"></nav>
         <nav th:replace="~{fragments/account :: account}"></nav>
         <h1 class="page-title" th:text="#{todo.edit}">編集</h1>
+        <p xmlns:sec="http://www.thymeleaf.org/extras/spring-security" sec:authorize="hasRole('ADMIN')">
+            <a class="link" th:href="@{/admin/audit-logs/entity/TODO/{id}(id=${id})}" th:text="#{audit.history}">変更履歴</a>
+        </p>
         <form th:action="@{/todos/{id}/confirm(id=${id})}" th:object="${todo}" method="post" th:attr="data-language-action=@{/todos/{id}/edit(id=${id})}">
             <div class="form-row">
                 <label class="form-label" for="title" th:text="#{todo.title}">やること</label>

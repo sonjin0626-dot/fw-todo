@@ -202,7 +202,7 @@ class TransactionManagementIntegrationTests {
 
     @Test
     void auditFailurePreventsAnUnauditedWrite() {
-        doThrow(new IllegalStateException("audit unavailable")).when(audit).insert("CREATE_ATTEMPT", null, actorId);
+        doThrow(new IllegalStateException("audit unavailable")).when(audit).insert(any(AuditLog.class));
 
         assertThatThrownBy(() -> todos.create(sample())).isInstanceOf(IllegalStateException.class);
 

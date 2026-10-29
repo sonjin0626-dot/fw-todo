@@ -26,15 +26,44 @@ import com.example.todoapp.exception.TodoNotFoundException;
 
 import jakarta.validation.Valid;
 
+/**
+ * ToDoのJSON APIとCSVダウンロードを提供するコントローラー。
+ *
+ * <p>認証・所有者の制限を{@link TodoService}と共有します。
+ * 入力には{@link TodoRequest}、JSON応答には{@link TodoDto}を使用します。</p>
+ *
+ * @author fw-todo contributors
+ * @version 0.0.1
+ * @since 0.0.1
+ * @see TodoService
+ * @see TodoRequest
+ * @see RestExceptionHandler
+ */
 @RestController
 public class TodoApiController {
 
     private final TodoService todoService;
 
+    /**
+     * APIで使用するToDoサービスを受け取ります。
+     *
+     * @param todoService ToDoサービス（{@code null}不可）
+     */
     public TodoApiController(TodoService todoService) {
         this.todoService = todoService;
     }
 
+    /**
+     * {@code GET /api/todos}で完了済みを含むToDo一覧をJSONで返します。ゴミ箱は除外します。
+     *
+     * @param keyword タイトルの部分一致条件（空文字で指定なし）
+     * @param category ジャンルの完全一致条件（空文字で指定なし）
+     * @param order {@code "desc"}で期限の降順、それ以外は昇順
+     * @param from 期限の下限（当日を含む）。{@code null}で下限なし
+     * @param to 期限の上限（当日を含む）。{@code null}で上限なし
+     * @return 閲覧可能なToDoの配列（HTTP 200）。該当なしなら空配列
+     * @throws org.springframework.security.access.AccessDeniedException 認証ユーザーが無効な場合
+     */
     @GetMapping(value = "/api/todos", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<TodoDto> list(
             @RequestParam(name = "keyword", defaultValue = "") String keyword,
@@ -49,6 +78,14 @@ public class TodoApiController {
                 .toList();
     }
 
+    /**
+     * {@code GET /api/todos/{id}}でゴミ箱以外のToDoを1件取得します。
+     *
+     * @param id 取得するToDoのID（{@code null}不可）
+     * @return {@link TodoDto}を本文に持つHTTP 200の応答
+     * @throws TodoNotFoundException 対象が存在しない、またはゴミ箱内の場合（HTTP 404）
+     * @throws org.springframework.security.access.AccessDeniedException 認証・所有者の検査に失敗した場合
+     */
     @GetMapping("/api/todos/{id}")
     public ResponseEntity<?> getById(@PathVariable("id") Long id) {
         Todo todo = todoService.findById(id);
@@ -58,6 +95,19 @@ public class TodoApiController {
         return ResponseEntity.ok(TodoDto.from(todo));
     }
 
+    /**
+     * {@code GET /api/todos.csv}で検索結果をUTF-8・BOM付きのCSVとしてダウンロードします。
+     *
+     * <p>ページで分割せず印・期限順で出力し、ゴミ箱は除外します。
+     * ヘッダー・状態・優先度のラベルは日本語です。</p>
+     *
+     * @param keyword タイトルの部分一致条件（空文字で指定なし）
+     * @param category ジャンルの完全一致条件（空文字で指定なし）
+     * @param order {@code "desc"}で期限の降順、それ以外は昇順
+     * @param includeCompleted 完了済みも含める場合は{@code true}
+     * @return ファイル名{@code todos.csv}、HTTP 200のダウンロード応答
+     * @throws org.springframework.security.access.AccessDeniedException 認証ユーザーが無効な場合
+     */
     @GetMapping(value = "/api/todos.csv", produces = "text/csv;charset=UTF-8")
     public ResponseEntity<byte[]> exportCsv(
             @RequestParam(name = "keyword", defaultValue = "") String keyword,
@@ -87,6 +137,12 @@ public class TodoApiController {
                 .body(csv.toString().getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * CSVの1行を追加します。引用符をエスケープし、数式としての解釈を抑制します。
+     *
+     * @param csv 出力先（{@code null}不可）
+     * @param values 各列の値。要素の{@code null}は空文字として出力する
+     */
     private static void appendCsvRow(StringBuilder csv, String... values) {
         for (int index = 0; index < values.length; index++) {
             if (index > 0) {
@@ -113,6 +169,13 @@ public class TodoApiController {
         csv.append("\r\n");
     }
 
+    /**
+     * {@code POST /api/todos}でToDoを作成します。入力は呼び出し前に検証されます。
+     *
+     * @param request 検証済みの作成内容（{@code null}不可）
+     * @return 作成済みToDoと、そのURLを示す{@code Location}ヘッダー付きのHTTP 201応答
+     * @throws org.springframework.security.access.AccessDeniedException 認証ユーザーが無効な場合
+     */
     @PostMapping("/api/todos")
     public ResponseEntity<TodoDto> create(@Valid @RequestBody TodoRequest request) {
         Todo todo = request.toTodo();
@@ -122,6 +185,15 @@ public class TodoApiController {
                 .body(TodoDto.from(created));
     }
 
+    /**
+     * {@code PUT /api/todos/{id}}でゴミ箱以外のToDoを更新します。
+     *
+     * @param id 更新するToDoのID（{@code null}不可）
+     * @param request 検証済みの更新内容（{@code null}不可）
+     * @return 更新後の{@link TodoDto}を本文に持つHTTP 200の応答
+     * @throws TodoNotFoundException 対象が存在しない、またはゴミ箱内の場合（HTTP 404）
+     * @throws org.springframework.security.access.AccessDeniedException 認証・所有者の検査に失敗した場合
+     */
     @PutMapping("/api/todos/{id}")
     public ResponseEntity<?> update(@PathVariable("id") Long id,
             @Valid @RequestBody TodoRequest request) {
@@ -135,6 +207,14 @@ public class TodoApiController {
         return ResponseEntity.ok(TodoDto.from(todoService.findById(id)));
     }
 
+    /**
+     * {@code DELETE /api/todos/{id}}でToDoを論理削除し、ゴミ箱へ移します。
+     *
+     * @param id 削除するToDoのID（{@code null}不可）
+     * @return 本文のないHTTP 204の応答
+     * @throws TodoNotFoundException 対象が存在しない、または既にゴミ箱内の場合（HTTP 404）
+     * @throws org.springframework.security.access.AccessDeniedException 認証・所有者の検査に失敗した場合
+     */
     @DeleteMapping("/api/todos/{id}")
     public ResponseEntity<?> delete(@PathVariable("id") Long id) {
         Todo existing = todoService.findById(id);
