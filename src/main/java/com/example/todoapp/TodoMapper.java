@@ -45,6 +45,7 @@ public interface TodoMapper {
             @Param("order") String order, @Param("limit") int limit, @Param("offset") long offset);
 
     void insert(Todo todo);
+    int updateDisplayOrder(@Param("userId") Long userId, @Param("id") Long id, @Param("displayOrder") int displayOrder);
 
     int update(Todo todo);
 

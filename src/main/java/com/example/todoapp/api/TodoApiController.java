@@ -42,6 +42,12 @@ import jakarta.validation.Valid;
 @RestController
 public class TodoApiController {
 
+    @PutMapping({"/api/todo/reorder", "/api/todos/reorder"})
+    public ResponseEntity<Void> reorder(@RequestBody List<ReorderRequest> requests) {
+        todoService.updateDisplayOrder(requests);
+        return ResponseEntity.ok().build();
+    }
+
     private final TodoService todoService;
 
     /**
@@ -114,7 +120,7 @@ public class TodoApiController {
             @RequestParam(name = "category", defaultValue = "") String category,
             @RequestParam(name = "order", defaultValue = "asc") String order,
             @RequestParam(name = "includeCompleted", defaultValue = "false") boolean includeCompleted) {
-        String sortOrder = "desc".equals(order) ? "desc" : "asc";
+        String sortOrder = "manual".equals(order) ? "manual" : ("desc".equals(order) ? "desc" : "asc");
         List<Todo> todos = todoService.searchForExport(keyword, category, sortOrder, includeCompleted);
         StringBuilder csv = new StringBuilder("\uFEFF");
         appendCsvRow(csv, "印", "やること", "ジャンル", "優先度", "期限", "状態", "メモ");

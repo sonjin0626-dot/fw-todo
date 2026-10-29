@@ -35,6 +35,19 @@ public class TodoOwnershipSchemaInitializer implements InitializingBean {
             String catalog = connection.getCatalog();
             String schema = connection.getSchema();
             try (Statement statement = connection.createStatement()) {
+                String orderColumn = metadata.storesUpperCaseIdentifiers() ? "DISPLAY_ORDER" : "display_order";
+                try (ResultSet columns = metadata.getColumns(catalog, schema, table, orderColumn)) {
+                    if (!columns.next()) {
+                        statement.executeUpdate("ALTER TABLE todos ADD COLUMN display_order INT NOT NULL DEFAULT 0");
+                        statement.executeUpdate("UPDATE todos SET display_order = id, updated_at = updated_at");
+                    }
+                }
+                boolean orderIndex = false;
+                try (ResultSet indexes = metadata.getIndexInfo(catalog, schema, table, false, false)) {
+                    while (indexes.next()) {
+                        if ("idx_todos_display_order".equalsIgnoreCase(indexes.getString("INDEX_NAME"))) orderIndex = true;
+                    }
+                }
                 String parentColumn = metadata.storesUpperCaseIdentifiers() ? "PARENT_ID" : "parent_id";
                 try (ResultSet columns = metadata.getColumns(catalog, schema, table, parentColumn)) {
                     if (!columns.next()) statement.executeUpdate("ALTER TABLE todos ADD COLUMN parent_id BIGINT NULL");
@@ -94,6 +107,7 @@ public class TodoOwnershipSchemaInitializer implements InitializingBean {
                     }
                 }
                 boolean foreignKeyExists = false;
+                if (!orderIndex) statement.executeUpdate("CREATE INDEX idx_todos_display_order ON todos(user_id, display_order)");
                 try (ResultSet keys = metadata.getImportedKeys(catalog, schema, table)) {
                     while (keys.next()) {
                         if ("user_id".equalsIgnoreCase(keys.getString("FKCOLUMN_NAME"))

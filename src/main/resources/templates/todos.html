@@ -2,6 +2,8 @@
 <html lang="ja" th:lang="${#locale.language}" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${trashMode ? #messages.msg('todo.trash') : #messages.msg('todo.list')}">一覧</title>
     <link rel="stylesheet" href="/css/style.css">
@@ -42,6 +44,7 @@
                download="todos.csv" th:text="#{todo.export}">CSVを書き出す</a>
             <a class="link" th:href="@{/todos(keyword=${keyword},category=${category},order='asc',includeCompleted=${includeCompleted},page=1,trash=${trashMode ? 1 : 0})}" th:text="#{todo.dueAsc}">期限が近い順</a>
             <a class="link" th:href="@{/todos(keyword=${keyword},category=${category},order='desc',includeCompleted=${includeCompleted},page=1,trash=${trashMode ? 1 : 0})}" th:text="#{todo.dueDesc}">期限が遠い順</a>
+            <a class="link" th:unless="${trashMode}" th:href="@{/todos(keyword=${keyword},category=${category},order='manual',includeCompleted=${includeCompleted},page=1)}" th:text="#{reorder.manual}">手動順</a>
             <a class="btn" th:href="@{/todos/new}" th:text="#{todo.new}">新規登録</a>
             <a class="link" th:href="@{/calendar}" th:text="#{calendar.view}">カレンダーで見る</a>
             <a class="link" th:unless="${trashMode}" th:href="@{/todos(trash=1)}" th:text="#{todo.viewTrash}">消したものを見る</a>
@@ -59,9 +62,12 @@
             <span id="bulk-selection-count" role="status" th:text="#{bulk.count(0)}">0件選択</span>
             <small th:text="#{bulk.help}">全選択は、このページに表示中の項目が対象です。</small>
         </form>
+        <p th:if="${!trashMode and order == 'manual'}" th:text="#{reorder.help}"></p>
+        <p id="reorder-status" role="status" aria-live="polite"></p>
         <table class="todo-table" th:unless="${#lists.isEmpty(todos)}">
             <thead>
                 <tr>
+                    <th th:if="${!trashMode and order == 'manual'}" th:text="#{reorder.manual}" scope="col"></th>
                     <th sec:authorize="hasRole('ADMIN')" th:unless="${trashMode}" scope="col">
                         <label><input type="checkbox" id="bulk-select-all" th:text="#{bulk.all}">全選択</label>
                     </th>
@@ -75,10 +81,13 @@
                     <th scope="col" th:text="#{common.actions}">操作</th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="todo-list" th:attr="data-reorder-url=@{/api/todo/reorder},data-enabled=${!trashMode and order == 'manual'},data-saved=#{reorder.saved},data-error=#{reorder.error}">
                 <tr th:each="todo : ${todos}"
                     th:classappend="${todo.overdue ? 'overdue-row' : (todo.nearDeadline ? 'warning-row' : '')}"
-                    th:attr="data-due-date=${todo.dueDate},data-completed=${todo.completed}">
+                    th:attr="data-id=${todo.id},data-due-date=${todo.dueDate},data-completed=${todo.completed}">
+                    <td th:if="${!trashMode and order == 'manual'}">
+                        <button type="button" class="drag-handle" draggable="true" th:attr="aria-label=#{reorder.handle}">⠿</button>
+                    </td>
                     <td sec:authorize="hasRole('ADMIN')" th:unless="${trashMode}">
                         <input type="checkbox" name="ids" th:value="${todo.id}" form="bulk-delete-form"
                                th:attr="aria-label=#{todo.select(${todo.title})}">
@@ -163,5 +172,6 @@
             updateSelection();
         }
     </script>
+    <script th:src="@{/js/drag-sort.js}" defer></script>
 </body>
 </html>

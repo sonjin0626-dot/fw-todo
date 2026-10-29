@@ -25,11 +25,16 @@
         <include refid="keywordCategoryFilters"/>
     </sql>
     <sql id="listOrder">
+        <choose>
+        <when test="order == 'manual'">ORDER BY display_order ASC, id ASC</when>
+        <otherwise>
         ORDER BY pinned DESC, due_date
         <choose>
             <when test="order == 'desc'">DESC</when>
             <otherwise>ASC</otherwise>
         </choose>, id ASC
+        </otherwise>
+        </choose>
     </sql>
     <sql id="pageOrder">
         <include refid="listOrder"/>
@@ -37,7 +42,7 @@
     </sql>
     <select id="search" resultType="com.example.todoapp.Todo">
         SELECT id, parent_id, user_id, title, detail, category, priority,
-               due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at
+               due_date, completed, completed_at, deleted_at, pinned, display_order, created_at, updated_at
         FROM todos
         <where>
             <include refid="searchFilters"/>
@@ -48,10 +53,14 @@
                 AND due_date &lt;= #{to}
             </if>
         </where>
-        ORDER BY due_date
+        <choose>
+        <when test="order == 'manual'">ORDER BY display_order ASC, id ASC</when>
+        <otherwise>ORDER BY due_date
         <choose>
             <when test="order == 'desc'">DESC</when>
             <otherwise>ASC</otherwise>
+        </choose>
+        </otherwise>
         </choose>
     </select>
     <select id="count" resultType="long">
@@ -64,7 +73,7 @@
         SELECT (SELECT COUNT(*) FROM todos child WHERE child.parent_id = todos.id AND child.deleted_at IS NULL) AS total_subtask_count,
                (SELECT COUNT(*) FROM todos child WHERE child.parent_id = todos.id AND child.deleted_at IS NULL AND child.completed = true) AS done_subtask_count,
                id, parent_id, user_id, title, detail, category, priority,
-               due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at
+               due_date, completed, completed_at, deleted_at, pinned, display_order, created_at, updated_at
         FROM todos
         <where>
             <include refid="searchFilters"/>
@@ -87,7 +96,7 @@
     </select>
     <select id="findById" resultType="com.example.todoapp.Todo">
         SELECT id, parent_id, user_id, title, detail, category, priority,
-               due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at
+               due_date, completed, completed_at, deleted_at, pinned, display_order, created_at, updated_at
         FROM todos
         WHERE id = #{id} AND deleted_at IS NULL
     </select>
@@ -116,7 +125,7 @@
     </update>
     <select id="searchForExport" resultType="com.example.todoapp.Todo">
         SELECT id, parent_id, user_id, title, detail, category, priority,
-               due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at
+               due_date, completed, completed_at, deleted_at, pinned, display_order, created_at, updated_at
         FROM todos
         <where>
             <include refid="searchFilters"/>
@@ -131,7 +140,7 @@
     </select>
     <select id="searchTrashPage" resultType="com.example.todoapp.Todo">
         SELECT id, parent_id, user_id, title, detail, category, priority,
-               due_date, completed, completed_at, deleted_at, pinned, created_at, updated_at
+               due_date, completed, completed_at, deleted_at, pinned, display_order, created_at, updated_at
         FROM todos
         <where>
             <include refid="trashFilters"/>
@@ -139,8 +148,9 @@
         <include refid="pageOrder"/>
     </select>
     <insert id="insert" parameterType="com.example.todoapp.Todo" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO todos (parent_id, user_id, title, detail, category, priority, due_date, completed)
-        VALUES (#{parentId}, #{userId}, #{title}, #{detail}, #{category}, #{priority}, #{dueDate}, COALESCE(#{completed}, false))
+        INSERT INTO todos (display_order, parent_id, user_id, title, detail, category, priority, due_date, completed)
+        SELECT COALESCE(MAX(display_order), 0) + 1, #{parentId}, #{userId}, #{title}, #{detail}, #{category}, #{priority}, #{dueDate}, COALESCE(#{completed}, false)
+        FROM todos
     </insert>
     <update id="update" parameterType="com.example.todoapp.Todo">
         UPDATE todos
@@ -190,6 +200,10 @@
     <update id="togglePinned">
         UPDATE todos SET pinned = NOT pinned
         WHERE id = #{id} <if test="userId != null">AND user_id = #{userId}</if> AND deleted_at IS NULL
+    </update>
+    <update id="updateDisplayOrder">
+        UPDATE todos SET display_order = #{displayOrder}, updated_at = updated_at
+        WHERE id = #{id} AND user_id = #{userId} AND parent_id IS NULL AND deleted_at IS NULL
     </update>
     <delete id="deleteByUserId">
         DELETE FROM todos WHERE user_id = #{userId}

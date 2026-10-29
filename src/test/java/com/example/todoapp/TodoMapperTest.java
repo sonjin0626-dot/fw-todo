@@ -74,7 +74,7 @@ class TodoMapperTest {
         assertThat(mapper.update(todo)).isEqualTo(1);
         Todo found = mapper.findById(todo.getId());
         assertThat(found).usingRecursiveComparison()
-                .ignoringFields("createdAt", "updatedAt", "completedAt", "pinned").isEqualTo(todo);
+                .ignoringFields("createdAt", "updatedAt", "completedAt", "pinned", "displayOrder").isEqualTo(todo);
         assertThat(found.getCompletedAt()).isNotNull();
 
         todo.setCompleted(false);

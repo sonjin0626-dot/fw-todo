@@ -109,7 +109,7 @@ public class HomeController {
             @RequestParam(name = "page", defaultValue = "1") int page,
             @RequestParam(name = "trash", defaultValue = "0") String trash, Model model) {
         boolean trashMode = "1".equals(trash);
-        String sortOrder = "desc".equals(order) ? "desc" : "asc";
+        String sortOrder = "manual".equals(order) ? "manual" : ("desc".equals(order) ? "desc" : "asc");
         long totalCount = trashMode ? todoService.countTrash(keyword, category)
                 : todoService.count(keyword, category, includeCompleted);
         int totalPages = (int) Math.max(1, (totalCount + TodoService.PAGE_SIZE - 1) / TodoService.PAGE_SIZE);
@@ -328,7 +328,7 @@ public class HomeController {
                 ? message("flash.selectItems") : message("flash.bulkDeleted", deleted));
         redirectAttributes.addAttribute("keyword", keyword);
         redirectAttributes.addAttribute("category", category);
-        redirectAttributes.addAttribute("order", "desc".equals(order) ? "desc" : "asc");
+        redirectAttributes.addAttribute("order", "manual".equals(order) ? "manual" : ("desc".equals(order) ? "desc" : "asc"));
         redirectAttributes.addAttribute("includeCompleted", includeCompleted);
         redirectAttributes.addAttribute("page", Math.max(1, page));
         return "redirect:/todos";
@@ -373,7 +373,7 @@ public class HomeController {
         redirectAttributes.addFlashAttribute("message", toggled ? message("flash.pinned") : message("flash.notFound"));
         redirectAttributes.addAttribute("keyword", keyword);
         redirectAttributes.addAttribute("category", category);
-        redirectAttributes.addAttribute("order", "desc".equals(order) ? "desc" : "asc");
+        redirectAttributes.addAttribute("order", "manual".equals(order) ? "manual" : ("desc".equals(order) ? "desc" : "asc"));
         redirectAttributes.addAttribute("includeCompleted", includeCompleted);
         redirectAttributes.addAttribute("page", Math.max(1, page));
         return "redirect:/todos";

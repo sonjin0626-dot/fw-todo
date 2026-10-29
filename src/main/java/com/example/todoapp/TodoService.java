@@ -476,6 +476,44 @@ public class TodoService {
      * @return 一般ユーザーのID。管理者の場合は全件を対象にするため{@code null}
      * @throws AccessDeniedException 未認証、または認証ユーザーが存在しない・無効な場合
      */
+    /** 表示中の行が占める位置だけを入れ替え、検索外の行は保持する。 */
+    @Transactional(rollbackFor = Exception.class)
+    public void updateDisplayOrder(List<com.example.todoapp.api.ReorderRequest> requests) {
+        Long actor = currentUserId();
+        if (requests == null || requests.isEmpty() || requests.size() > PAGE_SIZE) {
+            throw new com.example.todoapp.exception.BusinessException("REORDER_INVALID", "並び替える項目が正しくありません。");
+        }
+        var ids = new java.util.HashSet<Long>();
+        var orders = new java.util.HashSet<Integer>();
+        for (var request : requests) {
+            if (request == null || request.id() == null || request.id() <= 0
+                    || request.displayOrder() == null || request.displayOrder() < 1
+                    || request.displayOrder() > requests.size()
+                    || !ids.add(request.id()) || !orders.add(request.displayOrder())) {
+                throw new com.example.todoapp.exception.BusinessException("REORDER_INVALID", "並び替えの番号が正しくありません。");
+            }
+        }
+        // ID順にロックして更新競合を抑える。
+        for (Long id : ids.stream().sorted().toList()) {
+            Todo todo = todoMapper.lockById(id);
+            if (todo == null) throw new TodoNotFoundException(id);
+            checkOwner(todo, actor);
+            if (todo.getParentId() != null) {
+                throw new com.example.todoapp.exception.BusinessException("REORDER_INVALID", "親タスクのみ並び替えできます。");
+            }
+        }
+        List<Todo> all = todoMapper.searchForExport(actor, "", "", "manual", true);
+        List<Long> reordered = requests.stream().sorted(java.util.Comparator.comparing(
+                com.example.todoapp.api.ReorderRequest::displayOrder)).map(
+                com.example.todoapp.api.ReorderRequest::id).toList();
+        int next = 0;
+        for (int i = 0; i < all.size(); i++) {
+            Long id = all.get(i).getId();
+            if (ids.contains(id)) id = reordered.get(next++);
+            todoMapper.updateDisplayOrder(actor, id, i + 1);
+        }
+    }
+
     private Long scopeUserId() {
         // 認証と有効状態を確認してから、管理者だけ所有者条件を外す。
         Long userId = currentUserId();

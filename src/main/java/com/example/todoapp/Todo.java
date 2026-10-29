@@ -33,6 +33,7 @@ public class Todo {
     /** 所有者のユーザーID。登録・更新時にサービスが設定する。 */
     private Long userId;
     private Long parentId;
+    private Integer displayOrder;
     private Integer totalSubtaskCount;
     private Integer doneSubtaskCount;
     public long getSubtaskCount() { return totalSubtaskCount == null ? subtasks.size() : totalSubtaskCount; }
